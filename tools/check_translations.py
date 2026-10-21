@@ -71,7 +71,7 @@ def main():
     done = Counter({g: sum(k in translations for k in s) for g, s in groups.items()})
     for g in sorted(total, key=lambda g: -total[g])[:12]:
         print(f"{g:12} {done[g]:5}/{total[g]:<5}")
-    print(f"{'합계':12} {sum(done.values()):5}/{sum(total.values()):<5} (오프라인 범위)")
+    print(f"{'합계':12} {sum(done.values()):5}/{sum(total.values()):<5} (전체)")
     for line in warnings if args.warnings else warnings[:10]:
         print("경고", line)
     if len(warnings) > 10 and not args.warnings:

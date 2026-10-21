@@ -1,4 +1,4 @@
-"""번역 원문 추출: eng_us.db 오프라인 문자열 → work/source/<접두사>.json ({ID: 원문}).
+"""번역 원문 추출: eng_us.db 문자열 전부 → work/source/<접두사>.json ({ID: 원문}).
 
 게임 원문이므로 work/ 아래에만 쓴다(저장소에 올리지 않음).
 사용: python tools/export_source.py [--out work/source]
@@ -11,7 +11,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fnc import chunkzip, eb, t3db  # noqa: E402
-from pseudoloc import ONLINE_PREFIXES  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 BOOT_BIG = "PS3_GAME/USRDIR/databigs/ps3/boot.big"
@@ -26,7 +25,7 @@ def prefix(stringid):
 def group(rows):
     out = defaultdict(dict)
     for r in rows:
-        if r.text is None or r.stringid is None or r.stringid.startswith(ONLINE_PREFIXES):
+        if r.text is None or r.stringid is None:
             continue
         out[prefix(r.stringid)][r.stringid] = r.text
     return dict(out)

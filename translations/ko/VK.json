@@ -1,0 +1,11 @@
+{
+ "VK_BACK": "지우기",
+ "VK_CAPS": "대문자 고정",
+ "VK_CLEAR": "모두 지우기",
+ "VK_DONE": "완료",
+ "VK_ESC": "취소",
+ "VK_SELECT": "선택",
+ "VK_SHIFT": "Shift",
+ "VK_SPACE": "띄어쓰기",
+ "VK_SPECIALKEYS": "특수 문자"
+}
