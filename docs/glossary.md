@@ -210,3 +210,66 @@ EA, EA SPORTS, ESPN, Friday Night Fights(ESPN 프로그램명), PS3™, PlayStat
 - 실명 경기장은 음역(MGM 그랜드, 스테이플스 센터), 가상 체육관은 뜻을 살려 번역(AZTECA CLUB DE BOXEO → 아스테카 복싱 클럽)
 - 곡 크레디트: 곡명·앨범명·아티스트명은 원문(번역 파일에서 생략), 역할만 번역 — Performed by → 노래, Written by → 작사·작곡, Published by → 퍼블리싱, Recording courtesy of → 음원 제공
 - 법적 고지(© 문구 등)는 회사·상표명 영문 유지, 나머지 문구 번역
+
+## 전체 1차 번역에서 정한 용어 (2026-10-21)
+
+| 원문 | 번역 |
+|---|---|
+| Strength / Endurance / Conditioning / Reflexes (RFX) | 근력 / 지구력 / 컨디셔닝 / 반사 신경 (반사) |
+| Bronze / Silver / Gold / Platinum (Boost, XP Pack) | 브론즈 / 실버 / 골드 / 플래티넘 |
+| Ratings (복수, 능력치 화면) | 능력치 |
+| Iron Chin | 무쇠 턱 |
+| Swelling | 부기 |
+| Head-to-Head / H2H | 1:1 대전 / 1:1 |
+| Online Gym / Club | 체육관 (온라인 Club도 체육관) |
+| Gym Member / Gym Founder / Gym Points | 체육관 회원 / 체육관 창설자 / 체육관 포인트 |
+| Lead Profile / Active Profile | 대표 프로필 / 활성 프로필 |
+| Prize Fighting / Purse | 상금 시합 / 대전료 |
+| Quick Match / Custom Match / Unranked Match | 빠른 매치 / 커스텀 매치 / 일반 매치 |
+| Old School Rules / New School | 올드 스쿨 규칙 / 뉴 스쿨 |
+| Saved by the Bell / Three Knockdown Rule / Throw in the Towel | 벨 구제 / 3다운 규칙 / 수건 던지기 |
+| Unified Rules / Marquess of Queensberry Rules | 통합 규칙 / 퀸즈베리 후작 규칙 |
+| Rubber match | 3차전 |
+| Rematch | 재대결 |
+| Catchweight / Non-title fight | 캐치웨이트 / 논타이틀전 |
+| Mandatory challenger / Mandatory title defense | 지명 도전자 / 의무 타이틀 방어전 |
+| Commission (메시지) / EABA Commission | 협회 / EABA 위원회 |
+| Weight Class Rankings | 체급 랭킹 |
+| Legacy Goals / Legacy Ladder | 레거시 목표 / 레거시 사다리 |
+| Fight Calendar / Message Center / Balance Sheet | 시합 캘린더 / 메시지 센터 / 수지 내역 |
+| Fight Plan | 작전 |
+| Tale of the Tape | 선수 비교 |
+| Schedule Fight / Simulate | 시합 잡기 / 시뮬레이션 |
+| Fighter / Fight / Knockout / Upset of the Year | 올해의 선수 / 시합 / 녹아웃 / 이변 |
+| Up and Comer | 기대주 |
+| Ring Rust / Ring Walk / Ring Entrance | 실전 감각 저하 / 링 워크 / 입장 |
+| Blue / Red Corner | 청코너 / 홍코너 |
+| Get Ups | 다운 후 기립 |
+| Landed / Thrown / Connect % | 적중 / 시도 / 적중률 |
+| Decision Wins / KO Wins / KO Losses / Win Streak | 판정승 / KO승 / KO패 / 연승 |
+| Split Decision | 2:1 판정 |
+| Signature Punch / Lead / Rear | 시그니처 펀치 / 리드 / 리어 |
+| Flared Straight / Bolo / Shuffle / Fake | 플레어 스트레이트 / 볼로 / 셔플 / 페이크 |
+| Critical Stun | 크리티컬 그로기 |
+| Lean/Body Punch Modifier | 린/바디 펀치 보조 |
+| Slip / Lunge | 슬립 / 런지 |
+| Corner Game / Corner Points | 코너 게임 / 코너 포인트 |
+| Heavy Bag (훈련 종목) / bag (일반) | 헤비백 / 샌드백 |
+| Speed Bag / Double End Bag / Maize Bag / Focus Mitts | 스피드백 / 더블 엔드 백 / 메이즈 백 / 미트 훈련 |
+| Rope Work / Medicine Ball / Calisthenics / Plyometrics | 줄넘기 / 메디신 볼 / 맨몸 운동 / 플라이오메트릭 |
+| Close the Show / Get Inside / Defensive Specialist | 경기 끝내기 / 파고들기 / 수비 전문가 (훈련 게임) |
+| Mouth Guard | 마우스피스 |
+| Goatee / Soul Patch / Chin Patch / Stubble | 염소수염 / 아랫입술 수염 / 턱 밑 수염 / 까칠한 수염 |
+| Instant Replay / Highlight Reel / Marker / Clip | 인스턴트 리플레이 / 하이라이트 모음 / 마커 / 클립 |
+| Licensed (boxer) / Named Fighter | 실존 선수 / 실명 선수 |
+| Demo | 체험판 |
+| Video Calibration | 화면 보정 |
+| Presentation | 연출 |
+| Executive Producer / Producer / Development Director | 총괄 프로듀서 / 프로듀서 / 개발 디렉터 |
+| Special Thanks | 도움 주신 분들 |
+| 레거시 등급 약어 AMAT/PROS/CF/CONT/CHMP/SUPR/HOF/LGND | 아마 / 유망 / 클럽 / 도전 / 챔프 / 슈퍼 / 명전 / 전설 |
+
+- 별명(TXT_NICKNAME_*)은 경기장 아나운서 영어 음성과 맞추려고 음역 (아이언 마이크, 핸즈 오브 스톤)
+- 미국·캐나다 소도시는 `멤피스(테네시)`처럼 주를 괄호로
+- 튜토리얼 버튼 표기: `^X^ 버튼`, `^LS^ 스틱`처럼 명사를 붙여 조사 문제를 피한다
+- 명승부: Rumble in the Jungle 정글의 혈투, Thrilla in Manila 마닐라 스릴러, Fight of the Century 세기의 대결

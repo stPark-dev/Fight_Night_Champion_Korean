@@ -2,8 +2,8 @@
 
 EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한국어 팬 번역 프로젝트입니다.
 
-> **현재 상태: 기술 검증(PoC) 완료, 번역 전**
-> 한글 출력·전체 글자 세트·챔피언 모드 컷신 자막까지 RPCS3에서 확인했습니다. 실제 번역문과 배포용 패치는 아직 없습니다.
+> **현재 상태: 1차 번역 완료, 화면 검수 전**
+> 오프라인 문자열 7,388개 중 7,017개를 번역했습니다(나머지는 곡명·브랜드·기호 등 의도적 원문 유지). RPCS3 화면 검수와 배포용 패치는 아직입니다.
 
 이 저장소에는 **게임 데이터가 들어 있지 않습니다.** 원본 디스크 이미지·추출 파일·게임 텍스트는 각자 정품에서 준비해야 합니다.
 
@@ -15,11 +15,12 @@ EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한�
 | 한글 폰트 (TTF 8종에 한글 글리프 병합) | 완료, KS X 1001 2,350자 스트레스 통과 |
 | 메뉴·대화상자·시스템 저장 화면 한글 표시 | RPCS3 확인 |
 | 챔피언 모드 FMV 자막 (영어 경로에서는 원래 비활성) | EBOOT 패치로 활성화, RPCS3 확인 |
-| 번역 | 미착수 (범위: 오프라인 텍스트, 온라인 OSDK 계열 제외) |
+| 번역 | 1차 완료 7,017/7,388 (범위: 오프라인 텍스트, 온라인 OSDK 계열 제외) |
+| 화면 검수 (칸 폭·쓰임새 불명 항목) | 미착수 — [`docs/qa.md`](docs/qa.md) |
 | 이미지로 된 글자 목록화 | 미착수 |
 | 실기(CFW) 배포용 EBOOT 서명 | 미결정 |
 
-상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록), [`docs/style.md`](docs/style.md)·[`docs/glossary.md`](docs/glossary.md) (번역 규칙·용어집)
+상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록), [`docs/style.md`](docs/style.md)·[`docs/glossary.md`](docs/glossary.md) (번역 규칙·용어집), [`docs/qa.md`](docs/qa.md) (화면 확인 목록)
 
 ## 동작 방식
 
