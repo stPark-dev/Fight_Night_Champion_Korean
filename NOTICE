@@ -1,0 +1,13 @@
+Fight Night Champion 한글화 (비공식 팬 번역)
+
+이 저장소의 코드와 문서는 팬 번역 도구이며 Electronic Arts Inc.와 무관합니다.
+Fight Night Champion 및 관련 상표·게임 데이터는 Electronic Arts Inc.의 소유입니다.
+
+저장소에 포함하지 않는 것:
+- 디스크 이미지, 추출한 게임 파일, 복호화한 EBOOT
+- 게임 원문 텍스트 (translations/stress.json 등 생성물 포함)
+
+제3자 자원:
+- 나눔고딕 (NanumGothic) — Copyright (c) NAVER Corporation, SIL Open Font License 1.1.
+  빌드 시 게임 UI 폰트에 한글 글리프를 병합하는 원본으로 사용하며, 폰트 파일 자체는 저장소에 포함하지 않습니다.
+  라이선스 전문: https://openfontlicense.org/open-font-license-official-text/

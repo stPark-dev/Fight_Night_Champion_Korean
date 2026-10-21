@@ -1,0 +1,92 @@
+# Fight Night Champion 한글화 (PS3)
+
+EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한국어 팬 번역 프로젝트입니다.
+
+> **현재 상태: 기술 검증(PoC) 완료, 번역 전**
+> 한글 출력·전체 글자 세트·챔피언 모드 컷신 자막까지 RPCS3에서 확인했습니다. 실제 번역문과 배포용 패치는 아직 없습니다.
+
+이 저장소에는 **게임 데이터가 들어 있지 않습니다.** 원본 디스크 이미지·추출 파일·게임 텍스트는 각자 정품에서 준비해야 합니다.
+
+## 진행 상황
+
+| 항목 | 상태 |
+|---|---|
+| 텍스트 위치·포맷 해석 (EB 아카이브 / chunkzip / T3DB 허프만 DB) | 완료, 원본과 바이트 단위 왕복 검증 |
+| 한글 폰트 (TTF 8종에 한글 글리프 병합) | 완료, KS X 1001 2,350자 스트레스 통과 |
+| 메뉴·대화상자·시스템 저장 화면 한글 표시 | RPCS3 확인 |
+| 챔피언 모드 FMV 자막 (영어 경로에서는 원래 비활성) | EBOOT 패치로 활성화, RPCS3 확인 |
+| 번역 | 미착수 (범위: 오프라인 텍스트, 온라인 OSDK 계열 제외) |
+| 이미지로 된 글자 목록화 | 미착수 |
+| 실기(CFW) 배포용 EBOOT 서명 | 미결정 |
+
+상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록)
+
+## 동작 방식
+
+- 게임 언어는 PS3 시스템 언어를 따르며, 한국어·일본어 본체에서는 영어(`eng_us.db`)로 실행됩니다. 이 영어 DB를 한국어로 바꿉니다.
+- UI 폰트는 런타임 TrueType 렌더링이므로 기존 TTF에 한글 글리프만 병합합니다(원본 글리프·메트릭 보존).
+- 컷신 자막은 원래 프랑스어·독일어에서만 켜집니다. EBOOT의 자막 언어 분기 3곳을 고쳐 영어 경로에서도 `*_eng.sub`(프랑스어 자막 타이밍 복제)를 읽게 하고, 대사는 `eng_us.db`에서 가져옵니다.
+
+## 준비물
+
+- 정품 디스크에서 만든 `Fight Night Champion (Japan).iso` (BLJM60267)
+- Python 3.11+, `fontTools`, `pytest` / (분석·런타임 검증용) `capstone`, `python-xlib`
+- [RPCS3](https://rpcs3.net/) — EBOOT 복호화와 런타임 검증
+- 한글 원본 폰트: 나눔고딕 Bold (SIL OFL) — 기본 경로 `/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf`
+
+## 빌드
+
+```bash
+# 1) 원본 추출 (저장소에 포함되지 않음)
+7z x -owork/extract "Fight Night Champion (Japan).iso"
+
+# 2) EBOOT 복호화
+mkdir -p work/eboot && cp work/extract/PS3_GAME/USRDIR/EBOOT.BIN work/eboot/
+rpcs3 --no-gui --decrypt "$PWD/work/eboot/EBOOT.BIN"      # → work/eboot/EBOOT.elf
+
+# 3) 테스트
+python3 -m venv --system-site-packages .venv && .venv/bin/pip install capstone python-xlib
+.venv/bin/python -m pytest -q tests
+
+#    실데이터 테스트는 work/extract, work/eboot/EBOOT.elf, 나눔고딕이 없으면 skip 됩니다(결과의 skipped 수 확인)
+
+# 4) 빌드 → build/game (원본은 하드링크, 변경 파일만 새로 씀)
+python3 tools/build.py translations/poc.json
+```
+
+빌드 결과물(`build/game`)은 RPCS3에서 디스크 게임 폴더로 실행할 수 있습니다. 출력 EBOOT는 복호화 ELF 그대로라 **현재는 RPCS3 전용**입니다.
+
+`translations/*.json`은 `{ "문자열 ID": "번역문" }` 형식입니다. 시험용 의사 번역은 `python3 tools/pseudoloc.py translations/stress.json`으로 생성합니다(게임 원문을 포함하므로 저장소에 올리지 않음).
+
+## 구성
+
+```
+tools/
+  build.py            제품 빌드 (원본 → build/game)
+  pseudoloc.py        스트레스 시험용 의사 번역 생성
+  fnc/
+    eb.py             EA 'EB' v3 빅파일 아카이브 읽기/교체
+    chunkzip.py       EA chunkzip (청크 raw deflate)
+    t3db.py           T3DB v8 로컬라이즈 DB (허프만 문자열, CRC-32/MPEG-2)
+    fontmerge.py      게임 TTF에 한글 글리프 병합
+    eboot.py          복호화 EBOOT 명령 패치 (원래 값 검증 후 적용)
+  analysis/           포맷·코드 분석용 스크립트
+  hitl/               RPCS3 입력 자동화·캡처 (런타임 검증 보조)
+tests/                단위·통합 테스트
+docs/                 조사·PoC·결정 기록
+translations/         번역 입력
+```
+
+## EBOOT 패치 목록
+
+| 주소 | 내용 |
+|---|---|
+| `0x28a2fc` | 부트플로/어트랙트 영상: 영어일 때 자막 접미사 제거(`li r30,0`) → `nop` |
+| `0x28cc0c` | 자막 언어 접미사 함수: 영어/기타 → `"eng"` (프랑스어·독일어 불변) |
+| `0xfc88c8` | `PlayMovie` 메시지 함수의 같은 분기: 영어/기타 → `"eng"` |
+
+## 라이선스·고지
+
+- 이 프로젝트는 비공식 팬 번역이며 Electronic Arts와 무관합니다. Fight Night Champion은 Electronic Arts Inc.의 상표·저작물입니다.
+- 게임 데이터, 디스크 이미지, 게임 원문 텍스트는 배포하지 않습니다.
+- 한글 글리프 원본인 나눔고딕은 SIL Open Font License 1.1을 따릅니다. 자세한 내용은 [`NOTICE`](NOTICE)를 보세요.
