@@ -131,6 +131,9 @@ def build_eboot(elf_path):
     return eboot.apply(Path(elf_path).read_bytes(), eboot.SUBTITLE_PATCHES)
 
 
+PARTS = ("db", "fonts", "subs", "eboot")
+
+
 def build_files(extract, translations, hangul_font=DEFAULT_HANGUL_FONT):
     extract = Path(extract)
     chars = needed_chars(translations)
@@ -163,10 +166,25 @@ def main():
     ap.add_argument("--out", default=ROOT / "build" / "game")
     ap.add_argument("--font", default=DEFAULT_HANGUL_FONT)
     ap.add_argument("--elf", default=DEFAULT_ELF, help="복호화 EBOOT (RPCS3 --decrypt 결과)")
+    ap.add_argument("--parts", default=",".join(PARTS),
+                    help=f"넣을 구성 요소(쉼표 구분, 기본 전부): {','.join(PARTS)} — 문제 격리 시험용")
     args = ap.parse_args()
-    files = build_files(args.extract, load_translations(args.translations), args.font)
-    files.update(english_subtitles(args.extract))
-    files[EBOOT] = build_eboot(args.elf)
+    parts = set(args.parts.split(","))
+    if parts - set(PARTS):
+        ap.error(f"알 수 없는 구성 요소: {sorted(parts - set(PARTS))}")
+    extract = Path(args.extract)
+    translations = load_translations(args.translations)
+    files = {}
+    if {"db", "fonts"} <= parts:
+        files.update(build_files(extract, translations, args.font))
+    elif "db" in parts:
+        files[BOOT_BIG] = build_boot((extract / BOOT_BIG).read_bytes(), translations)
+    elif "fonts" in parts:
+        files[FE_BIG] = build_fe((extract / FE_BIG).read_bytes(), needed_chars(translations), args.font)
+    if "subs" in parts:
+        files.update(english_subtitles(extract))
+    if "eboot" in parts:
+        files[EBOOT] = build_eboot(args.elf)
     materialize(args.extract, args.out, files)
     for rel, data in files.items():
         print(f"{rel}  {len(data)}  sha256={hashlib.sha256(data).hexdigest()}")
