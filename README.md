@@ -19,7 +19,7 @@ EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한�
 | 이미지로 된 글자 목록화 | 미착수 |
 | 실기(CFW) 배포용 EBOOT 서명 | 미결정 |
 
-상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록)
+상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록), [`docs/style.md`](docs/style.md)·[`docs/glossary.md`](docs/glossary.md) (번역 규칙·용어집)
 
 ## 동작 방식
 
@@ -51,7 +51,19 @@ python3 -m venv --system-site-packages .venv && .venv/bin/pip install capstone p
 #    실데이터 테스트는 work/extract, work/eboot/EBOOT.elf, 나눔고딕이 없으면 skip 됩니다(결과의 skipped 수 확인)
 
 # 4) 빌드 → build/game (원본은 하드링크, 변경 파일만 새로 씀)
-python3 tools/build.py translations/poc.json
+python3 tools/build.py translations/ko
+```
+
+Windows(Git Bash)에서는 7-Zip 대신 Bandizip 콘솔(`bz x -o:work/extract …iso`), `rpcs3.exe --no-gui --decrypt <EBOOT.BIN 전체 경로>`, `python`을 쓰면 됩니다. 나눔고딕 Bold는 `work/fonts/NanumGothic-Bold.ttf`에 두면 우선 사용합니다(Google Fonts `ofl/nanumgothic`).
+
+### 번역 작업 흐름
+
+```bash
+python tools/export_source.py            # 원문 → work/source/<접두사>.json (저장소 밖)
+python tools/batches.py                  # 작업 단위 → work/batches/NN_<접두사>.json
+#   배치별 번역 결과 → work/out/NN_<접두사>.json  (docs/style.md, docs/glossary.md 기준)
+python tools/merge_batches.py            # → translations/ko/<접두사>.json
+python tools/check_translations.py       # 토큰·줄바꿈·글자 세트 검사, 진행률
 ```
 
 빌드 결과물(`build/game`)은 RPCS3에서 디스크 게임 폴더로 실행할 수 있습니다. 출력 EBOOT는 복호화 ELF 그대로라 **현재는 RPCS3 전용**입니다.

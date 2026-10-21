@@ -1,6 +1,6 @@
 """제품 빌드: 불변 원본 추출본 + 번역 → 변경된 아카이브 → 게임 폴더.
 
-사용: python3 tools/build.py <번역.json> [--out build/game]
+사용: python tools/build.py <번역.json | 번역 디렉터리> [--out build/game]
 """
 import argparse
 import hashlib
@@ -26,10 +26,13 @@ FONT_DIR = "data/ps3/fe/fonts/"
 FMV_DIR = "PS3_GAME/USRDIR/data/common/fmv"
 EBOOT = "PS3_GAME/USRDIR/EBOOT.BIN"
 DEFAULT_ELF = ROOT / "work" / "eboot" / "EBOOT.elf"
-DEFAULT_HANGUL_FONT = Path("/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf")
+_FONT_CANDIDATES = (ROOT / "work" / "fonts" / "NanumGothic-Bold.ttf",
+                    Path("/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"))
+DEFAULT_HANGUL_FONT = next((p for p in _FONT_CANDIDATES if p.exists()), _FONT_CANDIDATES[-1])
 
-# 번역에서 원문과 같은 개수·종류로 남아야 하는 제어 토큰 (printf, <n>, {cN}/{p0x..})
-TOKEN = re.compile(r"%\d*[a-z]|<\d+>|\{[cp][0-9a-fx]+\}")
+# 번역에서 원문과 같은 개수·종류로 남아야 하는 제어 토큰
+# (printf, 이름 변수 %PUNCHER, <n>, {cN}/{p0x..}, 버튼 아이콘 ^LT^)
+TOKEN = re.compile(r"%[A-Z]{2,}|%[-\d.]*[a-z]|<\d+>|\{[cp][0-9a-fx]+\}|\^[A-Z]+\^")
 
 
 def _no_duplicates(pairs):
@@ -40,14 +43,30 @@ def _no_duplicates(pairs):
     return dict(pairs)
 
 
-def load_translations(path):
+def _load_file(path):
     data = json.loads(Path(path).read_text(encoding="utf-8"), object_pairs_hook=_no_duplicates)
     if not isinstance(data, dict):
-        raise ValueError("번역 파일 최상위는 {ID: 번역문} 객체여야 함")
+        raise ValueError(f"{path}: 번역 파일 최상위는 {{ID: 번역문}} 객체여야 함")
     bad = [k for k, v in data.items() if not isinstance(v, str)]
     if bad:
-        raise ValueError(f"문자열이 아닌 항목: {bad[:5]}")
+        raise ValueError(f"{path}: 문자열이 아닌 항목: {bad[:5]}")
     return data
+
+
+def load_translations(path):
+    """번역 JSON 파일 하나, 또는 디렉터리 안의 *.json 전부(파일 간 중복 ID 금지)."""
+    path = Path(path)
+    if not path.is_dir():
+        return _load_file(path)
+    merged, origin = {}, {}
+    for f in sorted(path.glob("*.json")):
+        for k, v in _load_file(f).items():
+            if k in merged:
+                raise ValueError(f"중복 키 {k}: {origin[k].name}, {f.name}")
+            merged[k], origin[k] = v, f
+    if not merged:
+        raise ValueError(f"{path} 에 번역 파일 없음")
+    return merged
 
 
 def token_mismatches(translations, originals):

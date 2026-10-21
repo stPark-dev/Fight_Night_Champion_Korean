@@ -10,7 +10,7 @@ from fnc import chunkzip, eb, t3db
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTRACT = ROOT / "work" / "extract"
-HANGUL_SRC = Path("/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf")
+HANGUL_SRC = build.DEFAULT_HANGUL_FONT
 POC = {"TXT_PRESS_START_LINE_1": "START 버튼을", "TXT_PRESS_START_LINE_2": "누르세요"}
 
 
@@ -93,6 +93,15 @@ def test_load_translations_rejects_duplicate_keys(tmp_path):
         build.load_translations(p)
 
 
+def test_load_translations_merges_directory(tmp_path):
+    (tmp_path / "a.json").write_text('{"A": "가"}', encoding="utf-8")
+    (tmp_path / "b.json").write_text('{"B": "나"}', encoding="utf-8")
+    assert build.load_translations(tmp_path) == {"A": "가", "B": "나"}
+    (tmp_path / "c.json").write_text('{"A": "다"}', encoding="utf-8")
+    with pytest.raises(ValueError, match="중복 키 A"):
+        build.load_translations(tmp_path)
+
+
 def test_load_translations_rejects_non_object(tmp_path):
     p = tmp_path / "t.json"
     p.write_text('["가"]', encoding="utf-8")
@@ -107,6 +116,17 @@ def test_token_mismatch_fails():
     assert build.token_mismatches({"A": "%1d <0>{c0} 불러오기"}, orig) == ["A"]
     assert build.token_mismatches({"A": "%1s 불러오기"}, orig) == ["A"]
     assert build.token_mismatches({"B": "%3s %1s %2s"}, orig) == []
+
+
+def test_token_kinds():
+    orig = {"S": "%PUNCHER landed a %HAND to %PUNCHEE’s %TARGET", "T": "%dRD %d:%.2d",
+            "U": "Use ^LT^ or ^RT^", "V": "Win %"}
+    assert build.token_mismatches({"S": "%PUNCHER의 %HAND, %PUNCHEE의 %TARGET에 적중"}, orig) == []
+    assert build.token_mismatches({"S": "%PUNCHER의 %HAND 적중"}, orig) == ["S"]
+    assert build.token_mismatches({"T": "%dR %d:%d"}, orig) == ["T"]
+    assert build.token_mismatches({"U": "^LT^ 또는 ^RT^ 사용"}, orig) == []
+    assert build.token_mismatches({"U": "^LT^ 사용"}, orig) == ["U"]
+    assert build.token_mismatches({"V": "승률 %"}, orig) == []
 
 
 def test_build_files_rejects_token_mismatch():

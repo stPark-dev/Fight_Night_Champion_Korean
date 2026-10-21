@@ -4,11 +4,12 @@ from pathlib import Path
 import pytest
 from fontTools.ttLib import TTFont
 
+from build import DEFAULT_HANGUL_FONT
 from fnc import fontmerge
 
 ROOT = Path(__file__).resolve().parents[1]
 GAME_FONT = ROOT / "work/fe/data/ps3/fe/fonts/eahelveticaneueconbol-mod.ttf"
-HANGUL_SRC = Path("/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf")
+HANGUL_SRC = DEFAULT_HANGUL_FONT
 CHARS = "시작버튼을누르세요"
 
 
