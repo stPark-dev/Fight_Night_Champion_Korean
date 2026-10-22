@@ -1,10 +1,10 @@
 """게임 설명서(메인 메뉴 □) 한글 쪽 렌더러.
 
-입력: assets/manual/manual.json (쪽별 영어/한국어 블록), assets/manual/background.png(글자 없는 배경),
-      assets/manual/icons/*.png(버튼 아이콘), 원본 쪽 이미지(그림 쪽 재사용)
-출력: assets/manual/pages/ko_<N>.png (1024x1024, 내용은 왼쪽 위 960x540) — build 가 DDS 로 바꿔 넣는다.
+입력: assets/manual/manual.json (쪽별 한국어 원고·배치), work/manual/(manual_assets.py 가 원본에서 만든
+      배경·아이콘·원본 쪽 — 게임 그림이라 저장소에 두지 않음)
+출력: work/manual/pages/ko_<N>.png (1024x1024, 내용은 왼쪽 위 960x540) — build 가 DDS 로 바꿔 넣는다.
 
-사용: python tools/art/manual.py [--pages 5,6] [--src work/img]
+사용: python tools/art/manual.py [--pages 5,6]
 """
 import argparse
 import json
@@ -16,9 +16,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 ASSET = ROOT / "assets" / "manual"
+GEN = ROOT / "work" / "manual"
 FONT_BODY = ROOT / "work" / "fonts" / "NanumGothic-Bold.ttf"
 FONT_HEAD = ROOT / "work" / "fonts" / "BlackHanSans-Regular.ttf"
-SRC = ROOT / "work" / "img" / "artassets__manual_ps3__manual_ps3_eng_{}__2.png"
+SRC = GEN / "src" / "eng_{}.png"
 W, H = 960, 540
 YELLOW = (228, 180, 38)
 WHITE = (236, 236, 236)
@@ -35,7 +36,7 @@ def font(path, size):
 
 def icon(name, h):
     """버튼 아이콘(높이 h). 잘라 둔 그림이 없으면 같은 모양(밝은 둥근 사각 + 검은 글자)으로 그린다."""
-    p = ASSET / "icons" / f"{name}.png"
+    p = GEN / "icons" / f"{name}.png"
     if p.exists():
         im = Image.open(p).convert("RGBA")
         bg = np.asarray(im)[..., :3].astype(int).sum(-1)
@@ -194,10 +195,9 @@ def diagram_page(page, src):
     mask = np.zeros((H, W), np.uint8)
     for lb in page["labels"]:
         x, y = lb["x"], lb["y"]
-        en_lines = lb["en"].splitlines()
-        w = int(max(f.getlength(t) for t in en_lines) * 1.15) + 12
+        w, n_lines = lb["erase"]  # 원본 영어 설명이 차지하던 폭(px)·줄 수
         x0 = {"left": x - 4, "right": x - w, "center": x - w // 2}[lb.get("align", "left")]
-        mask[max(0, y - 16):y + 16 + 26 * (len(en_lines) - 1), max(0, x0):min(W, x0 + w)] = 255
+        mask[max(0, y - 16):y + 16 + 26 * (n_lines - 1), max(0, x0):min(W, x0 + w)] = 255
     if page.get("header"):
         mask[10:42, 480:950] = 255
     gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
@@ -265,22 +265,33 @@ def render(page, src, bg):
     return full
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--pages")
-    args = ap.parse_args()
+def render_all(want=None):
+    """원본 재료가 없으면 manual_assets 로 만든 뒤 쪽을 그린다."""
+    if not (GEN / "background.png").exists():
+        import manual_assets
+        manual_assets.prepare()
     pages = json.loads((ASSET / "manual.json").read_text(encoding="utf-8"))
-    bg = Image.open(ASSET / "background.png").convert("RGBA")
-    want = {int(p) for p in args.pages.split(",")} if args.pages else None
-    out = ASSET / "pages"
-    out.mkdir(exist_ok=True)
+    bg = Image.open(GEN / "background.png").convert("RGBA")
+    out = GEN / "pages"
+    out.mkdir(parents=True, exist_ok=True)
+    done = []
     for page in pages:
         n = page["page"]
         if want is not None and n not in want:
             continue
         img = render(page, Image.open(str(SRC).format(n)), bg)
         img.convert("RGB").save(out / f"ko_{n}.png")
-        print(out / f"ko_{n}.png")
+        done.append(out / f"ko_{n}.png")
+    return done
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pages")
+    args = ap.parse_args()
+    want = {int(p) for p in args.pages.split(",")} if args.pages else None
+    for p in render_all(want):
+        print(p)
 
 
 if __name__ == "__main__":

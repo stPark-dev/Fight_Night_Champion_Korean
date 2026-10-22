@@ -97,6 +97,10 @@ def image_files(arc, manifest=IMAGES):
     by_big = {}
     for it in items:
         by_big.setdefault(it["big"], []).append(it)
+    if any(it["png"].startswith("work:") and not (ROOT / "work" / it["png"][5:]).exists() for it in items):
+        sys.path.insert(0, str(ROOT / "tools" / "art"))
+        import manual  # 원본에서 설명서 쪽 생성(게임 그림은 저장소 밖 work/ 에)
+        manual.render_all()
     out = {}
     for big, its in by_big.items():
         nested = bigf.Bigf.parse(arc.read(big))
@@ -107,7 +111,8 @@ def image_files(arc, manifest=IMAGES):
             dds = refpack.unpack(raw) if refpack.is_refpack(raw) else raw
             if hashlib.sha1(dds).hexdigest() != it["orig_sha1"]:
                 raise ValueError(f"{big}:{it['entry']} 원본 텍스처가 다름")
-            dds = dxt.replace_dds_dxt5(dds, Image.open(Path(manifest).parent / it["png"]))
+            png = ROOT / "work" / it["png"][5:] if it["png"].startswith("work:") else Path(manifest).parent / it["png"]
+            dds = dxt.replace_dds_dxt5(dds, Image.open(png))
             new[it["entry"]] = refpack.pack(dds) if refpack.is_refpack(raw) else dds
         out[big] = nested.replaced(new).build()
     return out
