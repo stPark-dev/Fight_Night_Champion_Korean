@@ -142,3 +142,30 @@ def test_no_external_branch_into_rewritten_blocks(start, end):
 def test_playmovie_patch_guards_preceding_compare():
     guards = [p for p in eboot.SUBTITLE_PATCHES if p.vaddr == 0xFC88C0]
     assert guards and guards[0].old == guards[0].new == 0x2C030001  # cmpwi r3,1
+
+
+def test_date_patch_reorders_english_branch():
+    code = {p.vaddr: p.new for p in eboot.DATE_PATCHES if p.vaddr < 0x1000000}
+    assert _dis([code[0x381820], code[0x381824]], 0x381820) == ["lwz r7, 0x74(r1)", "ori r6, r29, 0"]
+    assert _dis([code[0x381828]], 0x381828) == ["addic r5, r5, 0x2ef0"]
+    assert _dis([code[0x381834]], 0x381834) == ["ori r8, r30, 0"]
+    assert _dis([code[0x381850]], 0x381850) == ["addic r5, r5, 0x2f08"]
+
+
+def test_date_patch_strings_fit_slots():
+    def slot(base, size):
+        words = [p.new for p in eboot.DATE_PATCHES if base <= p.vaddr < base + size]
+        assert len(words) == size // 4
+        return b"".join(struct.pack(">I", w) for w in words)
+    ymd = slot(eboot.KO_DATE_YMD, 24)
+    md = slot(eboot.KO_DATE_MD, 16)
+    assert ymd.split(b"\0")[0].decode() == "%d년 %s %d일"
+    assert md.split(b"\0")[0].decode() == "%s %d일"
+    # 결과 문자열이 snprintf 버퍼(0x20) 안에 들어가는지: 가장 긴 경우 "2099년 12월 31일"
+    assert len("2099년 12월 31일".encode()) < 0x20
+
+
+def test_real_all_patches_apply():
+    if not ELF.exists():
+        pytest.skip("복호화 EBOOT 없음")
+    eboot.apply(ELF.read_bytes(), eboot.ALL_PATCHES)

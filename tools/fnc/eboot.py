@@ -33,6 +33,11 @@ class asm:
         return cls._d(32, rd, ra, disp)
 
     @classmethod
+    def mr(cls, ra, rs):
+        """ori rA, rS, 0 (SNC 가 레지스터 복사에 쓰는 형태)"""
+        return cls._d(24, rs, ra, 0)
+
+    @classmethod
     def cmpwi(cls, ra, imm, cr=0):
         return cls._d(11, cr << 2, ra, imm)
 
@@ -113,6 +118,33 @@ SUBTITLE_PATCHES = (
     Patch(0xFC88C0, 0x2C030001, 0x2C030001, "확인: PlayMovie 분기 앞 cmpwi r3,1"),
     *_playmovie_branch(),
 )
+
+
+def _data(vaddr, old, new, why):
+    """vaddr 부터 old 바이트열(4의 배수, 슬롯 전체)을 new 로 바꾸는 단어 패치들. new 는 0 으로 채운다."""
+    if vaddr & 3 or len(old) & 3 or len(new) > len(old):
+        raise ValueError("데이터 패치 정렬/길이 오류")
+    new = new.ljust(len(old), b"\0")
+    return tuple(Patch(vaddr + i, int.from_bytes(old[i:i + 4], "big"), int.from_bytes(new[i:i + 4], "big"), why)
+                 for i in range(0, len(old), 4))
+
+
+# 0x3812ec 날짜 문자열 함수: 언어별 snprintf(buf, 0x20, 형식, ...). 영어(0x16) 분기는
+# ("%s %02d, %04d", 월이름, 일=r30, 연도=r29) / 연도 없음 ("%s %02d", 월이름, 일).
+# 한국어 어순("2011년 2월 2일")을 위해 영어 분기 인자를 (연도, 월이름, 일)로 바꾸고,
+# 이 게임이 쓰지 않는 스페인어(0x17) 형식 칸 2개에 한국어 형식을 넣어 가리키게 한다.
+KO_DATE_YMD, KO_DATE_MD = 0x12D2EF0, 0x12D2F08
+DATE_PATCHES = (
+    *_data(KO_DATE_YMD, b"%02d de %s de %04d".ljust(24, b"\0"), "%d년 %s %d일".encode(), "날짜 형식: 연 월 일"),
+    *_data(KO_DATE_MD, b"%02d de %s".ljust(16, b"\0"), "%s %d일".encode(), "날짜 형식: 월 일"),
+    Patch(0x381820, asm.lwz(6, 0x74, 1), asm.lwz(7, 0x74, 1), "날짜 영어 분기: 월이름 → 2번째 인자"),
+    Patch(0x381824, asm.mr(8, 29), asm.mr(6, 29), "날짜 영어 분기: 연도 → 1번째 인자"),
+    Patch(0x381828, asm.addic(5, 5, 0x2ED8), asm.addic(5, 5, KO_DATE_YMD & 0xFFFF), "날짜 영어 분기: 형식 → 연 월 일"),
+    Patch(0x381834, asm.mr(7, 30), asm.mr(8, 30), "날짜 영어 분기: 일 → 3번째 인자"),
+    Patch(0x381850, asm.addic(5, 5, 0x2EE8), asm.addic(5, 5, KO_DATE_MD & 0xFFFF), "날짜 영어 분기(연도 없음): 형식 → 월 일"),
+)
+
+ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES
 
 
 def _offset(elf, vaddr):
