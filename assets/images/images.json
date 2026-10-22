@@ -5,5 +5,180 @@
   "png": "select_sides_ko.png",
   "orig_sha1": "b20865d4718b78b7690869f59e90924ef04841f1",
   "note": "진영 선택 화면 SELECT SIDES → 진영 선택 (tools/art/select_sides.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_0.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_0.png",
+  "orig_sha1": "caf8c1141b7ffdd96bca1ec788b25d9c23102399",
+  "note": "설명서 0쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_1.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_1.png",
+  "orig_sha1": "5e5c75ae650ccb0e7325c675287983e7aa69b15f",
+  "note": "설명서 1쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_2.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_2.png",
+  "orig_sha1": "eda9dfae1bfe86dcb246f02f81a533c5bc96ee8a",
+  "note": "설명서 2쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_3.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_3.png",
+  "orig_sha1": "d9d132b2f0dff157e06bf43468445047ecf7e0a6",
+  "note": "설명서 3쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_4.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_4.png",
+  "orig_sha1": "e7bd6403829d833244d18a969de06f14f0c47ba4",
+  "note": "설명서 4쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_5.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_5.png",
+  "orig_sha1": "5ca49f9b11048bcab4ffac9e9fd791bd7f58c9c6",
+  "note": "설명서 5쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_6.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_6.png",
+  "orig_sha1": "5308c842b45410b4b6d923c3fb8ed4061d0aab2d",
+  "note": "설명서 6쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_7.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_7.png",
+  "orig_sha1": "791f8214dc688003baabf4db7a78f8c952e8eddf",
+  "note": "설명서 7쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_8.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_8.png",
+  "orig_sha1": "067051337af7586a7be25d3dd19e57496fc9aa5c",
+  "note": "설명서 8쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_9.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_9.png",
+  "orig_sha1": "5c9505d991fdb60b34568b38a2aa52c44cee9384",
+  "note": "설명서 9쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_10.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_10.png",
+  "orig_sha1": "29a24dbda61c256da21b27b15490cc3fe7629683",
+  "note": "설명서 10쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_11.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_11.png",
+  "orig_sha1": "20059be53ee1afec009f11d3ebe0be3d2e2c3db0",
+  "note": "설명서 11쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_12.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_12.png",
+  "orig_sha1": "c5d00b1ae0e5516f4b38786982e20a15bda5356b",
+  "note": "설명서 12쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_13.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_13.png",
+  "orig_sha1": "034d7e4b3ffb4096eb510e2661e83628cb6a5602",
+  "note": "설명서 13쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_14.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_14.png",
+  "orig_sha1": "d458da9c79488a2b64fc380a062223f4387b897e",
+  "note": "설명서 14쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_15.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_15.png",
+  "orig_sha1": "86f40df09b5e2b92c425d997184c73060b047b71",
+  "note": "설명서 15쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_16.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_16.png",
+  "orig_sha1": "2d77bff4b030ee0cd497c07d7cc5b2a54e0a40f8",
+  "note": "설명서 16쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_17.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_17.png",
+  "orig_sha1": "01835d974027815dcd233fff6f213022552a6d2e",
+  "note": "설명서 17쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_18.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_18.png",
+  "orig_sha1": "d4d85784b78773f218e8c3432c80f8f3939f4043",
+  "note": "설명서 18쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_19.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_19.png",
+  "orig_sha1": "6dc8a8d5caf50d590ea3ce47278fcedbfab159c2",
+  "note": "설명서 19쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_20.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_20.png",
+  "orig_sha1": "820f6253577d3315f70e5b9485417d0b30d58b31",
+  "note": "설명서 20쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_21.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_21.png",
+  "orig_sha1": "1e80dfa6a6b9bd68dad62e45f663cd96176fafb4",
+  "note": "설명서 21쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_22.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_22.png",
+  "orig_sha1": "6adff005544d46bd16332fd3c1c8fc3888ab757b",
+  "note": "설명서 22쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_23.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_23.png",
+  "orig_sha1": "70c3ffda67c26d349e9d40bf9a16e5c7aa409589",
+  "note": "설명서 23쪽 (tools/art/manual.py)"
+ },
+ {
+  "big": "data/ps3/fe/artassets/manual_ps3/manual_ps3_eng_24.big",
+  "entry": "2",
+  "png": "../manual/pages/ko_24.png",
+  "orig_sha1": "bab9e329e7322133c39c068afa826e117ff833bb",
+  "note": "설명서 24쪽 (tools/art/manual.py)"
  }
 ]

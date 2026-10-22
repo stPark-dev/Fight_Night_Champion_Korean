@@ -108,7 +108,7 @@ def image_files(arc, manifest=IMAGES):
             if hashlib.sha1(dds).hexdigest() != it["orig_sha1"]:
                 raise ValueError(f"{big}:{it['entry']} 원본 텍스처가 다름")
             dds = dxt.replace_dds_dxt5(dds, Image.open(Path(manifest).parent / it["png"]))
-            new[it["entry"]] = refpack.pack_literal(dds) if refpack.is_refpack(raw) else dds
+            new[it["entry"]] = refpack.pack(dds) if refpack.is_refpack(raw) else dds
         out[big] = nested.replaced(new).build()
     return out
 

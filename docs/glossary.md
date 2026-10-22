@@ -273,3 +273,18 @@ EA, EA SPORTS, ESPN, Friday Night Fights(ESPN 프로그램명), PS3™, PlayStat
 - 미국·캐나다 소도시는 `멤피스(테네시)`처럼 주를 괄호로
 - 튜토리얼 버튼 표기: `^X^ 버튼`, `^LS^ 스틱`처럼 명사를 붙여 조사 문제를 피한다
 - 명승부: Rumble in the Jungle 정글의 혈투, Thrilla in Manila 마닐라 스릴러, Fight of the Century 세기의 대결
+
+## 설명서·교정에서 정한 용어 (2026-10-22)
+
+| 원문 | 번역 |
+|---|---|
+| Damage | 대미지 (외래어 표기법, 데미지 아님) |
+| Stats (체력·스태미나·대미지 묶음) | 상태 수치 |
+| Stun States | 그로기 상태 |
+| Power Punch / Block modifier | 파워 펀치 보조 / 블록 보조 |
+| Complete Controls (Default Configuration) | 전체 조작법 (기본 설정) |
+| Punching and Movement / Boxer Creation and Growth | 펀치와 이동 / 선수 만들기와 성장 |
+| Rivalry Challenges / Gym Leaderboards | 라이벌전 / 체육관 순위표 |
+| My Career | 내 경력 |
+| Highlight Reel | 하이라이트 모음 |
+| Gym Member | 체육관 회원 |

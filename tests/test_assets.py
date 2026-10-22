@@ -20,6 +20,23 @@ def test_refpack_literal_roundtrip():
         assert refpack.unpack(packed) == data
 
 
+def test_refpack_lz_roundtrip_random():
+    import random
+    rnd = random.Random(1)
+    for _ in range(12):
+        # 반복 구간과 무작위 구간을 섞어 세 참조 형식과 긴 거리를 모두 거치게 한다
+        parts = []
+        for _ in range(rnd.randrange(1, 12)):
+            if parts and rnd.random() < 0.6:
+                src = b"".join(parts)
+                a = rnd.randrange(len(src))
+                parts.append(src[a:a + rnd.randrange(1, 2000)])
+            else:
+                parts.append(bytes(rnd.randrange(256) for _ in range(rnd.randrange(0, 40000))))
+        data = b"".join(parts)
+        assert refpack.unpack(refpack.pack(data)) == data
+
+
 def test_dxt5_encode_shape_and_alpha():
     img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
     img.paste((0, 0, 0, 255), (0, 0, 4, 4))

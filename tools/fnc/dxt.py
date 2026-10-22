@@ -47,18 +47,58 @@ def _alpha_block(px):
 
 
 def encode_dxt5(img):
-    """PIL RGBA 이미지(가로·세로 4의 배수) → DXT5 블록 바이트열."""
+    """PIL RGBA 이미지(가로·세로 4의 배수) → DXT5 블록 바이트열 (numpy 일괄 처리)."""
+    import numpy as np
     img = img.convert("RGBA")
     w, h = img.size
     if w % 4 or h % 4:
         raise ValueError("크기는 4의 배수여야 함")
-    pix = img.load()
-    out = bytearray()
-    for by in range(0, h, 4):
-        for bx in range(0, w, 4):
-            px = [pix[bx + x, by + y] for y in range(4) for x in range(4)]
-            out += _alpha_block(px) + _color_block(px)
-    return bytes(out)
+    a = np.asarray(img, dtype=np.int32)
+    # (블록 수, 16, 4) — 블록은 행 우선, 블록 안 픽셀도 행 우선
+    blk = a.reshape(h // 4, 4, w // 4, 4, 4).transpose(0, 2, 1, 3, 4).reshape(-1, 16, 4)
+    n = blk.shape[0]
+    # 알파
+    al = blk[..., 3]
+    a0, a1 = al.max(1), al.min(1)
+    steps = np.arange(8)
+    pal = np.empty((n, 8), np.int32)
+    pal[:, 0], pal[:, 1] = a0, a1
+    for i in range(1, 7):
+        pal[:, i + 1] = ((7 - i) * a0 + i * a1) // 7
+    aidx = np.abs(al[:, :, None] - pal[:, None, :]).argmin(2)
+    aidx[a0 == a1] = 0
+    abits = (aidx.astype(np.uint64) << (3 * np.arange(16, dtype=np.uint64))).sum(1)
+    # 색
+    rgb = blk[..., :3]
+    lum = rgb[..., 0] * 3 + rgb[..., 1] * 6 + rgb[..., 2]
+    hi = rgb[np.arange(n), lum.argmax(1)]
+    lo = rgb[np.arange(n), lum.argmin(1)]
+
+    def to565(c):
+        return ((c[:, 0] * 31 + 127) // 255) << 11 | ((c[:, 1] * 63 + 127) // 255) << 5 | ((c[:, 2] * 31 + 127) // 255)
+
+    c0, c1 = to565(hi), to565(lo)
+    swap = c0 < c1
+    c0, c1 = np.where(swap, c1, c0), np.where(swap, c0, c1)
+
+    def un565(v):
+        return np.stack([((v >> 11) & 31) * 255 // 31, ((v >> 5) & 63) * 255 // 63, (v & 31) * 255 // 31], 1)
+
+    e0, e1 = un565(c0), un565(c1)
+    cpal = np.stack([e0, e1, (2 * e0 + e1) // 3, (e0 + 2 * e1) // 3], 1)  # (n, 4, 3)
+    d = ((rgb[:, :, None, :] - cpal[:, None, :, :]) ** 2).sum(3)
+    cidx = d.argmin(2)
+    cidx[c0 == c1] = 0
+    cbits = (cidx.astype(np.uint64) << (2 * np.arange(16, dtype=np.uint64))).sum(1)
+    out = np.zeros((n, 16), np.uint8)
+    out[:, 0], out[:, 1] = a0, a1
+    for i in range(6):
+        out[:, 2 + i] = (abits >> np.uint64(8 * i)) & np.uint64(0xFF)
+    out[:, 8], out[:, 9] = c0 & 0xFF, c0 >> 8
+    out[:, 10], out[:, 11] = c1 & 0xFF, c1 >> 8
+    for i in range(4):
+        out[:, 12 + i] = (cbits >> np.uint64(8 * i)) & np.uint64(0xFF)
+    return out.tobytes()
 
 
 def replace_dds_dxt5(dds, img):
