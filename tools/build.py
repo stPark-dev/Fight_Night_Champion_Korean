@@ -16,7 +16,7 @@ from pathlib import Path
 from fontTools.ttLib import TTFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fnc import chunkzip, eb, eboot, fontmerge, t3db  # noqa: E402
+from fnc import bigf, chunkzip, dxt, eb, eboot, fontmerge, refpack, t3db  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 BOOT_BIG = "PS3_GAME/USRDIR/databigs/ps3/boot.big"
@@ -24,6 +24,7 @@ FE_BIG = "PS3_GAME/USRDIR/databigs/ps3/fe.big"
 ENG_DB = "data/ps3/loc/eng/database/eng_us.db"
 FONT_DIR = "data/ps3/fe/fonts/"
 FMV_DIR = "PS3_GAME/USRDIR/data/common/fmv"
+IMAGES = ROOT / "assets" / "images" / "images.json"
 EBOOT = "PS3_GAME/USRDIR/EBOOT.BIN"
 DEFAULT_ELF = ROOT / "work" / "eboot" / "EBOOT.elf"
 _FONT_CANDIDATES = (ROOT / "work" / "fonts" / "NanumGothic-Bold.ttf",
@@ -89,12 +90,37 @@ def build_boot(boot_raw, translations):
     return arc.replaced({ENG_DB: packed}).build()
 
 
-def build_fe(fe_raw, chars, hangul_font):
+def image_files(arc, manifest=IMAGES):
+    """assets/images/images.json 의 텍스처 교체: 중첩 BIGF 항목(DXT5 DDS, RefPack)을 한글 그림으로."""
+    from PIL import Image
+    items = json.loads(Path(manifest).read_text(encoding="utf-8")) if Path(manifest).exists() else []
+    by_big = {}
+    for it in items:
+        by_big.setdefault(it["big"], []).append(it)
+    out = {}
+    for big, its in by_big.items():
+        nested = bigf.Bigf.parse(arc.read(big))
+        cur = {e.name: e.data for e in nested.entries}
+        new = {}
+        for it in its:
+            raw = cur[it["entry"]]
+            dds = refpack.unpack(raw) if refpack.is_refpack(raw) else raw
+            if hashlib.sha1(dds).hexdigest() != it["orig_sha1"]:
+                raise ValueError(f"{big}:{it['entry']} 원본 텍스처가 다름")
+            dds = dxt.replace_dds_dxt5(dds, Image.open(Path(manifest).parent / it["png"]))
+            new[it["entry"]] = refpack.pack_literal(dds) if refpack.is_refpack(raw) else dds
+        out[big] = nested.replaced(new).build()
+    return out
+
+
+def build_fe(fe_raw, chars, hangul_font, images=True):
     arc = eb.Archive.parse(fe_raw)
     src = Path(hangul_font).read_bytes()
-    fonts = {e.path: fontmerge.merge(arc.read(e.path), src, chars)
+    files = {e.path: fontmerge.merge(arc.read(e.path), src, chars)
              for e in arc.entries if e.path.startswith(FONT_DIR) and e.path.endswith(".ttf")}
-    return arc.replaced(fonts).build()
+    if images:
+        files.update(image_files(arc))
+    return arc.replaced(files).build()
 
 
 def verify(files, translations, chars):

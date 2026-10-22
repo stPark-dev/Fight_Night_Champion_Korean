@@ -90,6 +90,19 @@
 - 3회차: 한글판 새 레거시 아마추어 토너먼트 3시합(약 13분) 정지 없음
 - 교대 반복 시험(원본/한글판 바로 시합 20분 × 4회씩, `work/runlogs/ab/summary.txt`) 진행
 
+## 그림 글자 목록 (2026-10-22, `work/img/sheet__*.png`)
+
+fe.big 의 중첩 BIGF(RefPack 압축, DXT5 DDS) 텍스처를 전부 풀어 확인.
+
+| 대상 | 위치 | 처리 |
+|---|---|---|
+| 진영 선택 `SELECT SIDES` | `game/screens/playnow/01_boxerselect.big` 항목 4 | **한글 그림으로 교체** (`assets/images/`, `tools/art/select_sides.py`) — 화면 확인 예정 |
+| 진영 선택 `VS` | 같은 파일 항목 7 | 유지 |
+| 게임 설명서(메인 메뉴 □) | `artassets/manual_ps3/*_eng_*` 25쪽 | 미착수 — 쪽마다 글자 이미지라 다시 그려야 함 |
+| 경기장·체육관 로고(`venue_title*`), ESPN/EA/PPV 로고 | `artassets/venue_title*`, overlays | 브랜드·고유명 로고로 유지 |
+| 부팅 법적 고지·ESRB | `game/screens/bootflow/*` | 유지 |
+| HUD·선수 성장·훈련 아이콘 | overlays, `artassets/boxer_growth` | 글자 없음(버튼 글자 R/LS 등만) |
+
 ## 쓰임새 불명 (임시 번역 또는 미번역)
 
 | ID | 원문 | 현재 | 확인할 것 |

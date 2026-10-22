@@ -1,0 +1,9 @@
+[
+ {
+  "big": "data/ps3/fe/game/screens/playnow/01_boxerselect.big",
+  "entry": "4",
+  "png": "select_sides_ko.png",
+  "orig_sha1": "b20865d4718b78b7690869f59e90924ef04841f1",
+  "note": "진영 선택 화면 SELECT SIDES → 진영 선택 (tools/art/select_sides.py)"
+ }
+]
