@@ -7,3 +7,4 @@ build/
 translations/stress.json
 __pycache__/
 .pytest_cache/
+release/

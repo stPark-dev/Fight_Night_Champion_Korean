@@ -17,8 +17,8 @@ EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한�
 | 챔피언 모드 FMV 자막 (영어 경로에서는 원래 비활성) | EBOOT 패치로 활성화, RPCS3 확인 |
 | 번역 | 1차 완료 9,556/9,983 (온라인 OSDK 포함 전체. 오프라인 흐름에도 OSDK 문구가 나와 범위 확대) |
 | 화면 검수 (칸 폭·쓰임새 불명 항목) | 1회차 완료(메뉴·레거시 초반·시합 HUD) — [`docs/qa.md`](docs/qa.md) |
-| 이미지로 된 글자 목록화 | 미착수 |
-| 실기(CFW) 배포용 EBOOT 서명 | 미결정 |
+| 그림 글자 | 진영 선택 화면·게임 설명서 25쪽 한글화 (경기장·브랜드 로고는 유지) — `assets/` |
+| 배포 | xdelta 패치 + `apply.bat` (RPCS3 전용, 실기용 EBOOT 서명 미결정) |
 
 상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록), [`docs/style.md`](docs/style.md)·[`docs/glossary.md`](docs/glossary.md) (번역 규칙·용어집), [`docs/qa.md`](docs/qa.md) (화면 확인 목록)
 
@@ -56,6 +56,15 @@ python3 tools/build.py translations/ko
 ```
 
 Windows(Git Bash)에서는 7-Zip 대신 Bandizip 콘솔(`bz x -o:work/extract …iso`), `rpcs3.exe --no-gui --decrypt <EBOOT.BIN 전체 경로>`, `python`을 쓰면 됩니다. 나눔고딕 Bold는 `work/fonts/NanumGothic-Bold.ttf`에 두면 우선 사용합니다(Google Fonts `ofl/nanumgothic`).
+
+### 배포 패키지
+
+```bash
+python tools/build.py translations/ko
+python tools/release.py v0.1        # → release/FNC_Korean_v0.1/ (xdelta 차분 약 2.6MB + apply.bat)
+```
+
+패키지에는 게임 데이터가 없습니다. 사용자는 자기 게임 폴더와 RPCS3로 복호화한 `EBOOT.elf`에 `apply.bat`를 적용합니다(원본 SHA-256 확인, 원본은 `*.orig`로 보존, 영어 자막 파일은 프랑스어 자막을 복제해 생성).
 
 ### 번역 작업 흐름
 
