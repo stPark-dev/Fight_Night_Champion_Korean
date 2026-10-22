@@ -169,3 +169,22 @@ def test_real_all_patches_apply():
     if not ELF.exists():
         pytest.skip("복호화 EBOOT 없음")
     eboot.apply(ELF.read_bytes(), eboot.ALL_PATCHES)
+
+
+def test_numeric_date_patch_orders_year_month_day():
+    code = {p.vaddr: p.new for p in eboot.DATE_PATCHES if 0x381460 <= p.vaddr < 0x3814A0}
+    words = [code[a] for a in (0x381468, 0x38146C)]
+    assert _dis(words, 0x381468) == ["addic r5, r6, 0x78", "ori r7, r3, 0"]
+    assert _dis([code[0x381478], code[0x38147C]], 0x381478) == ["ori r6, r29, 0", "ori r8, r30, 0"]
+    assert _dis([code[0x381488]], 0x381488) == ["addic r5, r4, 0x78"]
+    # 버퍼 주소로 덮이는 r3(월)는 addic r3 보다 먼저 읽혀야 한다
+    assert 0x38146C < 0x381470
+
+
+def test_numeric_date_target_strings():
+    if not ELF.exists():
+        pytest.skip("복호화 EBOOT 없음")
+    elf = ELF.read_bytes()
+    for va, s in ((0x12D2DC8 + 0x78, b"%04d.%02d.%02d"), (0x12D2DD8 + 0x78, b"%02d.%02d")):
+        off = eboot._offset(elf, va)
+        assert elf[off:off + len(s) + 1] == s + b"\0"

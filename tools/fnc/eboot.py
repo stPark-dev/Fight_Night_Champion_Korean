@@ -142,6 +142,14 @@ DATE_PATCHES = (
     Patch(0x381828, asm.addic(5, 5, 0x2ED8), asm.addic(5, 5, KO_DATE_YMD & 0xFFFF), "날짜 영어 분기: 형식 → 연 월 일"),
     Patch(0x381834, asm.mr(7, 30), asm.mr(8, 30), "날짜 영어 분기: 일 → 3번째 인자"),
     Patch(0x381850, asm.addic(5, 5, 0x2EE8), asm.addic(5, 5, KO_DATE_MD & 0xFFFF), "날짜 영어 분기(연도 없음): 형식 → 월 일"),
+    # 같은 함수의 숫자형 영어(0xa) 분기 0x381460: ("%02d/%02d/%04d", 월=r3, 일=r30, 연=r29) →
+    # 기존 형식 표의 "%04d.%02d.%02d"(0x12d2e40 = r6 0x12d2dc8 + 0x78)에 (연, 월, 일). r3 는 버퍼 주소로
+    # 덮이기 전에 읽어야 하므로 순서를 바꾼다. 연도 없음은 "%02d/%02d"(r4) → "%02d.%02d"(r4 + 0x78).
+    Patch(0x381468, asm.mr(5, 6), asm.addic(5, 6, 0x78), "숫자 날짜: 형식 → %04d.%02d.%02d"),
+    Patch(0x38146C, asm.mr(6, 3), asm.mr(7, 3), "숫자 날짜: 월 → 2번째 인자"),
+    Patch(0x381478, asm.mr(7, 30), asm.mr(6, 29), "숫자 날짜: 연 → 1번째 인자"),
+    Patch(0x38147C, asm.mr(8, 29), asm.mr(8, 30), "숫자 날짜: 일 → 3번째 인자"),
+    Patch(0x381488, asm.mr(5, 4), asm.addic(5, 4, 0x78), "숫자 날짜(연도 없음): 형식 → %02d.%02d"),
 )
 
 ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES
