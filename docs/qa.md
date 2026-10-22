@@ -88,7 +88,7 @@
 ### 시합 중 멈춤 — 추가 표본
 - 2차 멈춤 로그(`work/rpcs3/RPCS3_freeze2.log`)에는 GDB 접속 없음 → 디버거와 무관한 실제 정지
 - 3회차: 한글판 새 레거시 아마추어 토너먼트 3시합(약 13분) 정지 없음
-- 교대 반복 시험(원본/한글판 바로 시합 20분 × 4회씩, `work/runlogs/ab/summary.txt`) 진행
+- 교대 반복 시험 결과와 분석: [`freeze_investigation.md`](freeze_investigation.md)
 
 ## 그림 글자 목록 (2026-10-22, `work/img/sheet__*.png`)
 
