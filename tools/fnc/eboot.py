@@ -157,7 +157,7 @@ DATE_PATCHES = (
 # "AddAllocator[.ps3]  <이름>  <형식>  [ size=<N>M, ..." 의 크기를 같은 자릿수로만 바꾼다(문자열 길이 유지).
 # 조정 근거·검증은 docs/freeze_investigation.md.
 MEMCFG_AT = 0x12B6D72
-POOL_SIZES = {"FRONTEND_GEN": 28}  # 이름: MB. 한글 폰트(+2.6MB)가 FRONTEND_GEN 에 올라가므로 24M → 28M
+POOL_SIZES = {}  # 이름: MB — 빈 dict 이면 패치 없음 (FONT_GEN·FRONTEND_GEN 확대 모두 멈춤을 못 고침)
 
 
 def _memcfg(elf):

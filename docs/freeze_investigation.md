@@ -30,9 +30,20 @@ AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN → GLOBAL_GEN → FRONTEND_GE
     | GLOBAL_GEN 20M | 2/2 정지 |
     | **FRONTEND_GEN 32M** | **0/2 정지** |
 
-- **수정 (검증 중)**: `POOL_SIZES = {"FRONTEND_GEN": 28}` (24M → 28M, +4MB).
-  - 부팅 로그에서 0x1c00000 할당을 확인했다. OS 여유는 약 10MB 남는다.
-  - 바로 시합 20분 × 12회 검증 중이다(`work/runlogs/fix2/`).
+- **FRONTEND_GEN 24M → 28M 적용 결과 (기각)**: 부팅 로그에서 0x1c00000 할당을 확인했다. 그런데도 4회 중 2회(17분 40초, 9분 47초) 같은 지점에서 정지했다(`work/runlogs/fix2/`). 패치를 뺐다.
+  - 결론: 큰 폰트(+15MB)의 부팅 직후 정지는 FRONTEND_GEN 부족 때문이 맞다. 그러나 실제 한글판(+2.6MB)의 시합 중 정지는 그것과 다른 현상이다.
+- 리플레이 메타데이터(`dev_hdd1/.../replay_metadata/1.md`)에는 영문 선수 이름만 있다. 한글 문자열은 들어가지 않는다.
+
+## 재평가 (2026-10-23)
+
+| 대상 | 정지 |
+|---|---|
+| 한글 계열 빌드 전체 | 약 24회 중 5회(≈1/5) |
+| 원본 | 8회 중 0회 |
+| 구성 요소별 시험(전체·fe 원본·DB 원본·EBOOT 원본) | 모두 비슷하게 드묾 |
+
+- p=0.2라면 원본이 8회 연속 무사할 확률은 약 17%다. **원본도 같은 빈도로 멈출 수 있다(RPCS3 쪽 문제).**
+- 대조 시험: 원본 20분 × 12회 (`work/runlogs/orig12/`) 진행 중.
 - 도구: `tools/fnc/eboot.py` `memory_patches(elf, {풀 이름: MB})` — 같은 자릿수일 때만 바꾼다. 기본값은 패치 없음(`POOL_SIZES = {}`).
 
 ## 요약 (원인 확정 전 기록)
