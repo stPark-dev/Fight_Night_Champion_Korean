@@ -20,7 +20,19 @@ AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN → GLOBAL_GEN → FRONTEND_GE
   - 한글 11,172자(폰트 +35MB): 부팅 17~20초에 정지
   - 4,700자(+15MB): 28초에 정지
   - 2,350자(+7MB): 3분 시합에서 정지 없음(2회)
-- **가설 2 (검증 중)**: 폰트 파일 자체가 FRONTEND_GEN(24MB)에 올라가, 파일 시스템의 마지막 대체 풀을 줄인다. 확인 방법은 +15MB 변형을 FONT_GEN·FRONTEND_GEN·GLOBAL_GEN을 각각 키운 설정으로 시험해 비교하는 것이다(`work/runlogs/quick2/`).
+- **가설 2 (지지됨)**: 폰트 파일 자체가 FRONTEND_GEN(24MB)에 올라가, 파일 시스템의 마지막 대체 풀을 줄인다.
+  - +15MB 폰트 변형으로 부팅해 3분 시합을 2회씩 돌렸다(`work/runlogs/quick2/`).
+
+    | 설정 | 결과 |
+    |---|---|
+    | 원본 | 2/2 정지 (약 27초) |
+    | FONT_GEN 6M | 2/2 정지 |
+    | GLOBAL_GEN 20M | 2/2 정지 |
+    | **FRONTEND_GEN 32M** | **0/2 정지** |
+
+- **수정 (검증 중)**: `POOL_SIZES = {"FRONTEND_GEN": 28}` (24M → 28M, +4MB).
+  - 부팅 로그에서 0x1c00000 할당을 확인했다. OS 여유는 약 10MB 남는다.
+  - 바로 시합 20분 × 12회 검증 중이다(`work/runlogs/fix2/`).
 - 도구: `tools/fnc/eboot.py` `memory_patches(elf, {풀 이름: MB})` — 같은 자릿수일 때만 바꾼다. 기본값은 패치 없음(`POOL_SIZES = {}`).
 
 ## 요약 (원인 확정 전 기록)
