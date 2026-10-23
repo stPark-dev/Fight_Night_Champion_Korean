@@ -1,3 +1,4 @@
+import re
 import struct
 from pathlib import Path
 
@@ -190,12 +191,15 @@ def test_numeric_date_target_strings():
         assert elf[off:off + len(s) + 1] == s + b"\0"
 
 
-def test_font_pool_patch_changes_only_the_digit():
+def test_pool_size_patch_changes_only_digits():
     if not ELF.exists():
         pytest.skip("복호화 EBOOT 없음")
     elf = ELF.read_bytes()
-    out = eboot.apply_all(elf)
-    off = eboot._offset(elf, eboot.FONT_GEN_SIZE_AT)
-    assert out[off:off + 2] == f"{eboot.FONT_GEN_MB}M".encode()
-    diff = [i for i in range(off - 8, off + 8) if out[i] != elf[i]]
-    assert diff == [off]
+    out = eboot.apply_all(elf, {"FONT_GEN": 6, "FRONTEND_GEN": 32, "REPLAY_GEN": 8})
+    off, cfg = eboot._memcfg(out)
+    for name, mb in (("FONT_GEN", 6), ("FRONTEND_GEN", 32), ("REPLAY_GEN", 8)):
+        assert re.search(rf"{name}[ 	]+\w+[ 	]+\[ size={mb}M".encode(), cfg), name
+    changed = [i for i in range(len(elf)) if out[i] != elf[i] and off <= i < off + len(cfg)]
+    assert len(changed) == 4  # 1→6, 24→32 두 자리, 4→8
+    with pytest.raises(ValueError):
+        eboot.memory_patches(elf, {"FONT_GEN": 16})  # 자릿수 다름

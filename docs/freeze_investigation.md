@@ -1,23 +1,27 @@
 # 시합 중 멈춤 조사 (2026-10-22 ~ 23)
 
-## 원인 확정 (2026-10-23)
+## 메모리 설정 분석 (2026-10-23) — 원인 미확정
 
-EBOOT 안에 텍스트로 들어 있는 EA MemoryFramework 설정(`finalmemoryconfig.h`, ELF 0x12a6d72~)에서:
+EBOOT 안에 텍스트로 들어 있는 EA MemoryFramework 설정(`finalmemoryconfig.h`, ELF 0x12a6d72~, 사본 `work/memory_config_embedded.txt`)의 관련 부분:
 
 ```
-AddAllocator  FONT_GEN      PPMallocMutex [ size=1M ... ]     ← 폰트 전용 풀
-AddAllocator  OVERFLOW_GEN  PPMallocMutex [ size=10M ... ]    ← 게임플레이·오디오·리플레이·FE 공용 넘침 풀
+AddAllocator  FONT_GEN      PPMallocMutex [ size=1M ... ]     ← 폰트 엔진 전용 풀
+AddAllocator  OVERFLOW_GEN  PPMallocMutex [ size=10M ... ]    ← 공용 넘침 풀
+AddAllocator.ps3  FRONTEND_GEN  HighLow256K [ size=24M ... ]
 AddCategoryAllocator  Render::Font     FONT_GEN → OVERFLOW_GEN
-AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN/GLOBAL_GEN/FRONTEND_GEN  [ allowfail=1 ]
+AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN → GLOBAL_GEN → FRONTEND_GEN  [ allowfail=1 ]
 ```
 
-- 원본 UI 폰트 8종(0.63MB)은 FONT_GEN(1MB) 안에 들어간다. 한글 병합 후(3.25MB) 넘친 2.2MB가 OVERFLOW_GEN을 잠식한다.
-- 시합 중 리플레이 파일 처리(`Sys::FileSystem`, 할당 실패 허용)가 NULL을 받고, `0x4a5010`에서 NULL 버퍼에 쓰다가 정지한다.
-- **스트레스 확인**: 한글 11,172자를 넣어 폰트를 +35MB로 키우면 부팅 17~20초 만에 다른 할당 실패 지점(`0x1a45a8`)에서 정지한다(2회 재현). 4,700자(+15MB)는 28초 만에 동영상 디코드 스레드에서 정지한다.
-- **수정**: `tools/fnc/eboot.py` `memory_patches()` — 같은 길이 텍스트 `size=1M` → `size=6M`.
-  - 게임이 잡는 메모리는 사용 가능 188MB 중 약 173MB이고, OS 여유가 약 14MB 남아 5MB를 더 잡아도 된다.
-  - 부팅 로그에서 해당 풀이 0x600000으로 할당되는 것을 확인했다.
-- 검증: 수정 빌드로 바로 시합 20분 × 8회 (`work/runlogs/fix/`) — 결과는 아래에 추가한다.
+- 정지 지점의 호출 경로: 파일 입출력 작업 스레드(`/dev_hdd0`)가 끝난 작업의 콜백(`0x4a5010`)을 부르고, 콜백이 작업 객체+0x18의 버퍼에 쓴다. 이 버퍼가 NULL이었다. 파일 시스템 할당은 실패가 허용되므로(allowfail=1), 버퍼 할당 실패로 보인다.
+- **가설 1 (기각)**: 폰트가 FONT_GEN(1MB)을 넘쳐 OVERFLOW_GEN을 잠식한다.
+  - `FONT_GEN size=1M → 6M` 패치를 적용하고, 부팅 로그에서 0x600000 할당을 확인했다.
+  - 그래도 시험 1회차 9분 35초에 같은 지점에서 정지했다(5회 중 1회, `work/runlogs/fix/`). 기각하고 패치를 뺐다.
+- 스트레스 관찰:
+  - 한글 11,172자(폰트 +35MB): 부팅 17~20초에 정지
+  - 4,700자(+15MB): 28초에 정지
+  - 2,350자(+7MB): 3분 시합에서 정지 없음(2회)
+- **가설 2 (검증 중)**: 폰트 파일 자체가 FRONTEND_GEN(24MB)에 올라가, 파일 시스템의 마지막 대체 풀을 줄인다. 확인 방법은 +15MB 변형을 FONT_GEN·FRONTEND_GEN·GLOBAL_GEN을 각각 키운 설정으로 시험해 비교하는 것이다(`work/runlogs/quick2/`).
+- 도구: `tools/fnc/eboot.py` `memory_patches(elf, {풀 이름: MB})` — 같은 자릿수일 때만 바꾼다. 기본값은 패치 없음(`POOL_SIZES = {}`).
 
 ## 요약 (원인 확정 전 기록)
 

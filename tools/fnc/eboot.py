@@ -1,4 +1,5 @@
 """복호화된 EBOOT(ELF64 BE)에 명령 단위 패치 적용. 모든 패치는 원래 값 확인 후 적용."""
+import re
 import struct
 from dataclasses import dataclass
 
@@ -152,26 +153,52 @@ DATE_PATCHES = (
     Patch(0x381488, asm.mr(5, 4), asm.addic(5, 4, 0x78), "숫자 날짜(연도 없음): 형식 → %02d.%02d"),
 )
 
-# EBOOT 에 텍스트로 내장된 메모리 설정(finalmemoryconfig.h)의 폰트 전용 풀 FONT_GEN 은 1M 이다.
-# 한글을 병합한 UI 폰트 8종(약 3.2MB)이 넘쳐 OVERFLOW_GEN(게임플레이·리플레이와 공유)을 잠식하고,
-# 시합 중 리플레이 파일 할당(Sys::FileSystem, allowfail=1)이 NULL 을 받아 0x4a5010 에서 멈춘다
-# (docs/freeze_investigation.md). 같은 길이의 텍스트로 크기만 바꾼다: "size=1M" → "size=6M".
-FONT_GEN_SIZE_AT = 0x12B71AE  # "...FONT_GEN		 		PPMallocMutex		[ size=1M, ..." 의 숫자 '1'
-FONT_GEN_MB = 6
+# EBOOT 에 텍스트로 내장된 EA MemoryFramework 설정(finalmemoryconfig.h, ELF 0x12a6d72~).
+# "AddAllocator[.ps3]  <이름>  <형식>  [ size=<N>M, ..." 의 크기를 같은 자릿수로만 바꾼다(문자열 길이 유지).
+# 조정 근거·검증은 docs/freeze_investigation.md.
+MEMCFG_AT = 0x12B6D72
+POOL_SIZES = {}  # 이름: MB  — 빈 dict 이면 패치 없음
 
 
-def memory_patches(elf):
-    """FONT_GEN 크기 패치. 주변 텍스트가 기대와 같을 때만 만든다(원래 단어는 실제 ELF 에서 읽음)."""
-    off = _offset(elf, FONT_GEN_SIZE_AT)
-    ctx = elf[off - 35:off + 2]
-    if ctx != b"FONT_GEN		 		PPMallocMutex		[ size=1M":
-        raise ValueError(f"FONT_GEN 설정 텍스트가 다름: {ctx!r}")
-    word_at = FONT_GEN_SIZE_AT & ~3
-    shift = 8 * (3 - (FONT_GEN_SIZE_AT - word_at))
-    woff = _offset(elf, word_at)
-    old = struct.unpack_from(">I", elf, woff)[0]
-    new = (old & ~(0xFF << shift)) | (ord(str(FONT_GEN_MB)) << shift)
-    return (Patch(word_at, old, new, f"메모리 설정: FONT_GEN 1M → {FONT_GEN_MB}M"),)
+def _memcfg(elf):
+    off = _offset(elf, MEMCFG_AT)
+    end = elf.index(b"\0", off)
+    return off, elf[off:end]
+
+
+def memory_patches(elf, sizes=None):
+    sizes = POOL_SIZES if sizes is None else sizes
+    off, cfg = _memcfg(elf)
+    out = []
+    for name, mb in sizes.items():
+        hits = [m for m in re.finditer(rb"AddAllocator(\.ps3)?[ 	]+" + re.escape(name.encode())
+                                       + rb"[ 	]+\w+[ 	]+\[ size=(\d+)M", cfg)]
+        if len(hits) != 1:
+            raise ValueError(f"메모리 설정에서 {name} 을(를) 하나로 찾지 못함: {len(hits)}")
+        m = hits[0]
+        old_txt, new_txt = m.group(2), str(mb).encode()
+        if len(old_txt) != len(new_txt):
+            raise ValueError(f"{name}: 자릿수가 달라 바꿀 수 없음 {old_txt} → {new_txt}")
+        for i, (a, b) in enumerate(zip(old_txt, new_txt)):
+            if a == b:
+                continue
+            va = MEMCFG_AT + m.start(2) + i
+            word_at = va & ~3
+            shift = 8 * (3 - (va - word_at))
+            woff = _offset(elf, word_at)
+            old = struct.unpack_from(">I", elf, woff)[0]
+            out.append(Patch(word_at, old, (old & ~(0xFF << shift)) | (b << shift),
+                             f"메모리 설정: {name} {old_txt.decode()}M → {mb}M"))
+    # 같은 단어를 두 번 고치는 경우는 합친다
+    merged = {}
+    for pt in out:
+        if pt.vaddr in merged:
+            prev = merged[pt.vaddr]
+            mask = prev.old ^ pt.new
+            merged[pt.vaddr] = Patch(pt.vaddr, prev.old, (prev.new & ~(prev.old ^ pt.new)) | (pt.new & (prev.old ^ pt.new)), prev.why + " / " + pt.why)
+        else:
+            merged[pt.vaddr] = pt
+    return tuple(merged.values())
 
 
 ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES
@@ -187,9 +214,9 @@ def _offset(elf, vaddr):
     raise KeyError(hex(vaddr))
 
 
-def apply_all(elf):
+def apply_all(elf, pool_sizes=None):
     """자막·날짜·메모리 설정 패치 전부."""
-    return apply(elf, ALL_PATCHES + memory_patches(elf))
+    return apply(elf, ALL_PATCHES + memory_patches(elf, pool_sizes))
 
 
 def apply(elf, patches):
