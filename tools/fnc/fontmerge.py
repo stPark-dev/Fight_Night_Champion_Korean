@@ -2,10 +2,14 @@
 
 원본 글리프·메트릭·cmap 항목은 그대로 두고, 요청 문자만 새 글리프로 추가한다.
 크기는 원본 'H' 높이(캡 하이트) 비율로 맞추고, 새 글리프에는 힌팅 명령을 넣지 않는다.
+simplify(폰트 단위 허용 오차)를 주면 윤곽을 2차→3차→2차 곡선으로 다시 근사해 점 수를 줄인다
+(게임 메모리가 빠듯해 폰트 크기를 줄여야 함 — docs/freeze_investigation.md).
 """
 import io
 
-from fontTools.pens.recordingPen import DecomposingRecordingPen
+from fontTools.pens.cu2quPen import Cu2QuPen
+from fontTools.pens.qu2cuPen import Qu2CuPen
+from fontTools.pens.recordingPen import DecomposingRecordingPen, RecordingPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
@@ -18,7 +22,7 @@ def _cap_height(font):
     return font["glyf"]["H"].yMax if "glyf" in font else font["OS/2"].sCapHeight
 
 
-def merge(base_bytes, source_bytes, chars):
+def merge(base_bytes, source_bytes, chars, simplify=0):
     base = TTFont(io.BytesIO(base_bytes), recalcTimestamp=False)  # 재현 가능한 빌드
     src = TTFont(io.BytesIO(source_bytes))
     src_cmap = src.getBestCmap()
@@ -50,7 +54,12 @@ def merge(base_bytes, source_bytes, chars):
         rec = DecomposingRecordingPen(src_glyphs)
         src_glyphs[src_cmap[cp]].draw(rec)
         pen = TTGlyphPen(None)
-        rec.replay(TransformPen(pen, (s, 0, 0, s, 0, dy)))
+        if simplify:
+            cubic = RecordingPen()
+            rec.replay(TransformPen(Qu2CuPen(cubic, max_err=simplify, all_cubic=True), (s, 0, 0, s, 0, dy)))
+            cubic.replay(Cu2QuPen(pen, max_err=simplify, reverse_direction=False))
+        else:
+            rec.replay(TransformPen(pen, (s, 0, 0, s, 0, dy)))
         g = pen.glyph()
         g.recalcBounds(glyf)
         adv = round(src["hmtx"][src_cmap[cp]][0] * s)

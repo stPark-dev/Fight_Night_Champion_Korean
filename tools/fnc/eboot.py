@@ -152,6 +152,28 @@ DATE_PATCHES = (
     Patch(0x381488, asm.mr(5, 4), asm.addic(5, 4, 0x78), "숫자 날짜(연도 없음): 형식 → %02d.%02d"),
 )
 
+# EBOOT 에 텍스트로 내장된 메모리 설정(finalmemoryconfig.h)의 폰트 전용 풀 FONT_GEN 은 1M 이다.
+# 한글을 병합한 UI 폰트 8종(약 3.2MB)이 넘쳐 OVERFLOW_GEN(게임플레이·리플레이와 공유)을 잠식하고,
+# 시합 중 리플레이 파일 할당(Sys::FileSystem, allowfail=1)이 NULL 을 받아 0x4a5010 에서 멈춘다
+# (docs/freeze_investigation.md). 같은 길이의 텍스트로 크기만 바꾼다: "size=1M" → "size=6M".
+FONT_GEN_SIZE_AT = 0x12B71AE  # "...FONT_GEN		 		PPMallocMutex		[ size=1M, ..." 의 숫자 '1'
+FONT_GEN_MB = 6
+
+
+def memory_patches(elf):
+    """FONT_GEN 크기 패치. 주변 텍스트가 기대와 같을 때만 만든다(원래 단어는 실제 ELF 에서 읽음)."""
+    off = _offset(elf, FONT_GEN_SIZE_AT)
+    ctx = elf[off - 35:off + 2]
+    if ctx != b"FONT_GEN		 		PPMallocMutex		[ size=1M":
+        raise ValueError(f"FONT_GEN 설정 텍스트가 다름: {ctx!r}")
+    word_at = FONT_GEN_SIZE_AT & ~3
+    shift = 8 * (3 - (FONT_GEN_SIZE_AT - word_at))
+    woff = _offset(elf, word_at)
+    old = struct.unpack_from(">I", elf, woff)[0]
+    new = (old & ~(0xFF << shift)) | (ord(str(FONT_GEN_MB)) << shift)
+    return (Patch(word_at, old, new, f"메모리 설정: FONT_GEN 1M → {FONT_GEN_MB}M"),)
+
+
 ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES
 
 
@@ -163,6 +185,11 @@ def _offset(elf, vaddr):
         if p_type == 1 and va <= vaddr and vaddr + 4 <= va + filesz:
             return off + vaddr - va
     raise KeyError(hex(vaddr))
+
+
+def apply_all(elf):
+    """자막·날짜·메모리 설정 패치 전부."""
+    return apply(elf, ALL_PATCHES + memory_patches(elf))
 
 
 def apply(elf, patches):

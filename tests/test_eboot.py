@@ -188,3 +188,14 @@ def test_numeric_date_target_strings():
     for va, s in ((0x12D2DC8 + 0x78, b"%04d.%02d.%02d"), (0x12D2DD8 + 0x78, b"%02d.%02d")):
         off = eboot._offset(elf, va)
         assert elf[off:off + len(s) + 1] == s + b"\0"
+
+
+def test_font_pool_patch_changes_only_the_digit():
+    if not ELF.exists():
+        pytest.skip("복호화 EBOOT 없음")
+    elf = ELF.read_bytes()
+    out = eboot.apply_all(elf)
+    off = eboot._offset(elf, eboot.FONT_GEN_SIZE_AT)
+    assert out[off:off + 2] == f"{eboot.FONT_GEN_MB}M".encode()
+    diff = [i for i in range(off - 8, off + 8) if out[i] != elf[i]]
+    assert diff == [off]

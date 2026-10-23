@@ -159,7 +159,7 @@ def english_subtitles(extract):
 
 
 def build_eboot(elf_path):
-    return eboot.apply(Path(elf_path).read_bytes(), eboot.ALL_PATCHES)
+    return eboot.apply_all(Path(elf_path).read_bytes())
 
 
 PARTS = ("db", "fonts", "subs", "eboot")
