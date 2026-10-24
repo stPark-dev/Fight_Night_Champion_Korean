@@ -244,3 +244,8 @@ AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN → GLOBAL_GEN → FRONTEND_GE
 - 콜백 `0x4a5010`은 아무것도 쓰지 않는다. `+0x18`이 이미 0이면(경쟁이 실제로 났던 경우) 없는 syscall 1023을 불러, RPCS3 syscall 통계(`syscall_1023 [횟수]`)에 남긴다.
 - 확인: 표시 syscall이 RPCS3에서 문제없이 처리되고 통계에 잡히는 것을 짧은 시험으로 확인했다(`work/runlogs/marktest`, 정상 경로 표시 변형에서 1,146회).
 - 검증: 20분 × 12회 (`work/runlogs/racefix/`). RPCS3 단축키는 시험용으로 모두 쓰지 않는 조합으로 바꿨다(`GuiConfigs/CurrentSettings.ini`, 원본은 `.bak_before_qa`).
+- 가설 확인(`work/runlogs/marktest2/`, 원본 폰트·DB + 진단 EBOOT):
+  - 콜백마다 작업 구조체를 TTY로 덤프하게 했다. 콜백 시점에 이미 `+8 = 1`(완료)이었다. 387개 모두 같은 구조체 배치였고, 앞쪽에 넘친 글자 흔적은 없었다.
+  - 12분 20초에 `+0x18 = 0`인 경우가 실제로 나왔다. 진단 변형의 분기 대상 실수로 그 경우 0번지에 쓰여 `Access violation writing location 0x0`이 났다.
+  - 즉 원본 데이터에서도 콜백이 느려지면 같은 경쟁이 난다. 한글 데이터 자체의 문제가 아니라 기존 경쟁이다.
+  - `grep`이 로그를 바이너리로 보고 `·F`를 놓칠 수 있어, 앞으로는 `grep -a`로 센다(nullchk2 12회는 `-a`로 다시 세어도 0).
