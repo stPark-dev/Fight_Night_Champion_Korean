@@ -245,6 +245,35 @@ def cover_page(src):
     return img
 
 
+def toc_page(page, src):
+    """목차: 원본 쪽의 줄 막대는 살리고 영어 글자만 지운 뒤 한국어 항목과 쪽 번호를 같은 자리에 쓴다."""
+    import cv2
+    im = np.asarray(src.convert("RGB"))[:H, :W].copy()
+    gray = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+    mask = np.zeros((H, W), np.uint8)
+    mask[55:100, 20:400] = (gray[55:100, 20:400] > 90) * 255          # 제목(별 포함)
+    mask[105:465, 40:940] = (gray[105:465, 40:940] > 120) * 255       # 항목·쪽 번호
+    mask = cv2.dilate(mask, np.ones((5, 5), np.uint8))
+    clean = cv2.inpaint(cv2.cvtColor(im, cv2.COLOR_RGB2BGR), mask, 5, cv2.INPAINT_TELEA)
+    img = Image.fromarray(cv2.cvtColor(clean, cv2.COLOR_BGR2RGB)).convert("RGBA")
+    d = ImageDraw.Draw(img)
+    head = next(b for b in page["blocks"] if b["type"] == "heading")
+    hf = font(FONT_HEAD, 32)
+    star(img, 38, 75, 22)
+    d.text((LEFT, 75), head["ko"], font=hf, fill=YELLOW, anchor="lm")
+    star(img, LEFT + hf.getlength(head["ko"]) + 15, 75, 22)
+    items = next(b for b in page["blocks"] if b["type"] == "list")["items"]
+    f, nf = font(FONT_BODY, 21), font(FONT_HEAD, 26)
+    for i, it in enumerate(items):
+        title, num = (c.strip() for c in it["ko"].split("|", 1))
+        y = 129 + i * 44.5                                              # 원본 줄 간격
+        d.text((LEFT, y), title, font=f, fill=WHITE, anchor="lm")
+        d.text((914, y), num, font=nf, fill=WHITE, anchor="rm")
+    if page.get("number"):
+        d.text((RIGHT, 507), page["number"], font=font(FONT_HEAD, 22), fill=GREY, anchor="rm")
+    return img
+
+
 def cover_or_toc(page, src, bg):
     if page["kind"] == "cover":
         return src.convert("RGBA").crop((0, 0, W, H))  # 표지는 로고 그림이라 원본 유지(제목 아래 MANUAL 만 교체)
@@ -254,6 +283,8 @@ def cover_or_toc(page, src, bg):
 def render(page, src, bg):
     if page["kind"] == "diagram":
         img = diagram_page(page, src)
+    elif page["kind"] == "toc":
+        img = toc_page(page, src)
     elif page["kind"] in ("cover", "toc"):
         img = cover_or_toc(page, src, bg)
         if page["kind"] == "cover":
