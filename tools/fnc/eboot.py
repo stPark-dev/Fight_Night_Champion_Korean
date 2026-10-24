@@ -201,35 +201,83 @@ def memory_patches(elf, sizes=None):
     return tuple(merged.values())
 
 
-# 시합 중 멈춤 임시책(docs/freeze_investigation.md): 리플레이 비동기 쓰기 완료 콜백 0x4a5010 은
-#   lwz r3,0x18(r3) / li r4,0 / stb r4,0(r3) / blr   — 작업 구조체 +0x18(바쁨 플래그 주소)이 0이면 0번지에 써서 정지.
-# 코드 세그먼트 끝(0x16a2ce8)과 다음 세그먼트(0x16b0000) 사이 빈 공간을 16바이트 늘려 동굴로 쓰고,
-# 콜백을 "주소가 0이면 그냥 돌아감, 아니면 동굴에서 0을 쓰고 돌아감"으로 바꾼다.
+# 시합 중 멈춤 수정(docs/freeze_investigation.md): 리플레이 기록기는 작업 구조체 하나를 열기·쓰기·닫기에 돌려쓴다.
+# 비동기 작업 일꾼(0x7bc0c0)은 "완료(+8) 기록 → 완료 콜백 호출" 순서라, 완료를 본 기록기가 콜백보다 먼저
+# 작업을 재사용하면(+0x18 = 0) 쓰기 완료 콜백 0x4a5010 이
+#   lwz r3,0x18(r3) / li r4,0 / stb r4,0(r3) / blr
+# 에서 0번지에 쓰고 정지한다(원본에도 있는 경쟁, 한글판에서 자주 남).
+# 고침: 일꾼이 완료를 기록하기 "전에" 이 콜백의 바쁨 플래그를 지우고(정상 경로·취소 경로 둘 다),
+# 콜백 자체는 아무것도 쓰지 않는다. 콜백은 +0x18 이 이미 0이면(경쟁이 났던 경우) 없는 syscall(MARK_SYSCALL)을
+# 불러 RPCS3 syscall 통계에 횟수를 남긴다(실기에서는 ENOSYS 반환뿐).
+# 동굴은 코드 세그먼트 끝(0x16a2ce8)과 다음 세그먼트(0x16b0000) 사이 빈 공간을 늘려 쓴다.
 TEXT_END, CAVE = 0x16A2CE8, 0x16A2CF0
-TEXT_END_NEW = CAVE + 16
-
-
-def _beqlr():
-    return 0x4D820020  # bclr 12,2 (cr0 EQ 이면 복귀)
+MARK_SYSCALL, SC = 1023, 0x44000002
+LWSYNC, BNELR = 0x7C2004AC, 0x4C820020
+REPLAY_CB_OPD = 0x16C8D60  # 0x4a5010 의 함수 기술자
+WORKER_DONE, CANCEL_DONE = 0x7BC0C8, 0x7BB96C  # stw rX,8(job) — 완료 기록
 
 
 def _li(rd, imm):
     return asm._d(14, rd, 0, imm)
 
 
+def _addi(rd, ra, imm):
+    return asm._d(14, rd, ra, imm)
+
+
 def _stb(rs, d, ra):
     return asm._d(38, rs, ra, d)
 
 
-NULLCHECK_PATCHES = (
-    Patch(0x4A5010, 0x80630018, 0x80630018, "확인: lwz r3,0x18(r3)"),
-    Patch(0x4A5014, 0x38800000, asm.cmpwi(3, 0), "리플레이 쓰기 콜백: 플래그 주소 NULL 확인"),
-    Patch(0x4A5018, 0x98830000, _beqlr(), "리플레이 쓰기 콜백: NULL 이면 복귀"),
-    Patch(0x4A501C, asm.BLR, asm.b(0x4A501C, CAVE), "리플레이 쓰기 콜백: 동굴로"),
-    Patch(CAVE, 0, _li(4, 0), "동굴: li r4,0"),
-    Patch(CAVE + 4, 0, _stb(4, 0, 3), "동굴: stb r4,0(r3)"),
-    Patch(CAVE + 8, 0, asm.BLR, "동굴: blr"),
-)
+def _stw(rs, d, ra):
+    return asm._d(36, rs, ra, d)
+
+
+def _cmpw(ra, rb):
+    return 0x7C000000 | (ra << 16) | (rb << 11)
+
+
+def _bne(at, target):
+    return (16 << 26) | (4 << 21) | (2 << 16) | ((target - at) & 0xFFFC)
+
+
+def _bl(at, target):
+    return asm.b(at, target) | 1
+
+
+def _clear_then_done(at, job, cb, res, t):
+    """cb(=작업 +0x1c)가 리플레이 콜백이면 *(job+0x18) 바쁨 플래그를 먼저 지우고, 완료(res)를 기록."""
+    w = [] if cb is not None else [asm.lwz(t[0], 0x1C, job)]
+    cb = t[0] if cb is None else cb
+    w += [asm.lis(t[1], (REPLAY_CB_OPD + 0x8000) >> 16), _addi(t[1], t[1], REPLAY_CB_OPD & 0xFFFF), _cmpw(cb, t[1])]
+    k = len(w)  # bne 위치, 건너뛸 곳 = lwsync
+    w += [_bne(at + 4 * k, at + 4 * (k + 6)), asm.lwz(t[0], 0x18, job), asm.cmpwi(t[0], 0),
+          asm.beq(at + 4 * (k + 3), at + 4 * (k + 6)), _li(t[1], 0), _stb(t[1], 0, t[0])]
+    return w + [LWSYNC, _stw(res, 8, job), asm.BLR]
+
+
+def _caves():
+    cb_at = CAVE
+    cb = [asm.lwz(5, 0x18, 3), asm.cmpwi(5, 0), BNELR, _li(11, MARK_SYSCALL), SC, asm.BLR]
+    w_at = cb_at + 4 * len(cb)
+    worker = _clear_then_done(w_at, job=25, cb=4, res=5, t=(6, 7))
+    c_at = w_at + 4 * len(worker)
+    cancel = _clear_then_done(c_at, job=30, cb=None, res=4, t=(6, 7))
+    return [(cb_at, cb), (w_at, worker), (c_at, cancel)]
+
+
+def race_patches():
+    (cb_at, _), (w_at, _), (c_at, _) = _caves()
+    out = [Patch(0x4A5010, 0x80630018, asm.b(0x4A5010, cb_at), "리플레이 쓰기 콜백: 쓰지 않고 경쟁 횟수만 표시"),
+           Patch(WORKER_DONE, _stw(5, 8, 25), _bl(WORKER_DONE, w_at), "일꾼: 플래그 지운 뒤 완료 기록"),
+           Patch(CANCEL_DONE, _stw(4, 8, 30), _bl(CANCEL_DONE, c_at), "일꾼(취소): 플래그 지운 뒤 완료 기록")]
+    for at, words in _caves():
+        out += [Patch(at + 4 * i, 0, w, f"동굴 {at + 4 * i:#x}") for i, w in enumerate(words)]
+    return tuple(out)
+
+
+RACE_PATCHES = race_patches()
+TEXT_END_NEW = CAVE + 4 * sum(len(w) for _, w in _caves()) + 8
 
 
 def extend_text(elf, new_end=TEXT_END_NEW):
@@ -246,7 +294,7 @@ def extend_text(elf, new_end=TEXT_END_NEW):
     return bytes(out)
 
 
-ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES + NULLCHECK_PATCHES
+ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES + RACE_PATCHES
 
 
 def _offset(elf, vaddr):

@@ -205,14 +205,24 @@ def test_pool_size_patch_changes_only_digits():
         eboot.memory_patches(elf, {"FONT_GEN": 16})  # 자릿수 다름
 
 
-def test_nullcheck_patch_disassembles():
+def test_race_fix_disassembles():
     if not ELF.exists():
         pytest.skip("복호화 EBOOT 없음")
     out = eboot.apply_all(ELF.read_bytes())
-    words = lambda va, n: [struct.unpack_from(">I", out, eboot._offset(out, va + 4 * i))[0] for i in range(n)]
-    assert _dis(words(0x4A5010, 4), 0x4A5010) == [
-        "lwz r3, 0x18(r3)", "cmpwi r3, 0", "beqlr", f"b {eboot.CAVE:#x}"]
-    assert _dis(words(eboot.CAVE, 3), eboot.CAVE) == ["li r4, 0", "stb r4, 0(r3)", "blr"]
+    word = lambda va: struct.unpack_from(">I", out, eboot._offset(out, va))[0]
+    (cb_at, cb), (w_at, worker), (c_at, cancel) = eboot._caves()
+    assert _dis([word(0x4A5010)], 0x4A5010) == [f"b {cb_at:#x}"]
+    assert _dis([word(eboot.WORKER_DONE)], eboot.WORKER_DONE) == [f"bl {w_at:#x}"]
+    assert _dis([word(eboot.CANCEL_DONE)], eboot.CANCEL_DONE) == [f"bl {c_at:#x}"]
+    # 콜백은 아무 데도 쓰지 않는다
+    assert _dis([word(cb_at + 4 * i) for i in range(len(cb))], cb_at) == [
+        "lwz r5, 0x18(r3)", "cmpwi r5, 0", "bnelr", f"li r11, {eboot.MARK_SYSCALL:#x}", "sc", "blr"]
+    for at, words, job, res in ((w_at, worker, 25, 5), (c_at, cancel, 30, 4)):
+        dis = _dis([word(at + 4 * i) for i in range(len(words))], at)
+        # 플래그 지우기 → lwsync → 완료 기록 순서
+        assert dis[-3:] == ["lwsync", f"stw r{res}, 8(r{job})", "blr"]
+        assert f"lwz r6, 0x18(r{job})" in dis and "stb r7, 0(r6)" in dis
+        assert dis.index("stb r7, 0(r6)") < dis.index("lwsync")
 
 
 def test_extend_text_only_grows_code_segment():
