@@ -201,7 +201,52 @@ def memory_patches(elf, sizes=None):
     return tuple(merged.values())
 
 
-ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES
+# 시합 중 멈춤 임시책(docs/freeze_investigation.md): 리플레이 비동기 쓰기 완료 콜백 0x4a5010 은
+#   lwz r3,0x18(r3) / li r4,0 / stb r4,0(r3) / blr   — 작업 구조체 +0x18(바쁨 플래그 주소)이 0이면 0번지에 써서 정지.
+# 코드 세그먼트 끝(0x16a2ce8)과 다음 세그먼트(0x16b0000) 사이 빈 공간을 16바이트 늘려 동굴로 쓰고,
+# 콜백을 "주소가 0이면 그냥 돌아감, 아니면 동굴에서 0을 쓰고 돌아감"으로 바꾼다.
+TEXT_END, CAVE = 0x16A2CE8, 0x16A2CF0
+TEXT_END_NEW = CAVE + 16
+
+
+def _beqlr():
+    return 0x4D820020  # bclr 12,2 (cr0 EQ 이면 복귀)
+
+
+def _li(rd, imm):
+    return asm._d(14, rd, 0, imm)
+
+
+def _stb(rs, d, ra):
+    return asm._d(38, rs, ra, d)
+
+
+NULLCHECK_PATCHES = (
+    Patch(0x4A5010, 0x80630018, 0x80630018, "확인: lwz r3,0x18(r3)"),
+    Patch(0x4A5014, 0x38800000, asm.cmpwi(3, 0), "리플레이 쓰기 콜백: 플래그 주소 NULL 확인"),
+    Patch(0x4A5018, 0x98830000, _beqlr(), "리플레이 쓰기 콜백: NULL 이면 복귀"),
+    Patch(0x4A501C, asm.BLR, asm.b(0x4A501C, CAVE), "리플레이 쓰기 콜백: 동굴로"),
+    Patch(CAVE, 0, _li(4, 0), "동굴: li r4,0"),
+    Patch(CAVE + 4, 0, _stb(4, 0, 3), "동굴: stb r4,0(r3)"),
+    Patch(CAVE + 8, 0, asm.BLR, "동굴: blr"),
+)
+
+
+def extend_text(elf, new_end=TEXT_END_NEW):
+    """코드 세그먼트(첫 PT_LOAD, R+X) 크기를 new_end 까지 늘린다. 늘리는 영역은 파일에서 0 이어야 한다."""
+    out = bytearray(elf)
+    phoff, = struct.unpack_from(">Q", elf, 0x20)
+    t, fl, off, va, pa, fs, ms, al = struct.unpack_from(">IIQQQQQQ", elf, phoff)
+    if t != 1 or not fl & 1 or va + fs != TEXT_END or fs != ms:
+        raise ValueError(f"예상한 코드 세그먼트가 아님: va={va:#x} filesz={fs:#x}")
+    grow = new_end - (va + fs)
+    if any(elf[off + fs:off + fs + grow]):
+        raise ValueError("늘릴 영역이 비어 있지 않음")
+    struct.pack_into(">QQ", out, phoff + 0x20, fs + grow, ms + grow)
+    return bytes(out)
+
+
+ALL_PATCHES = SUBTITLE_PATCHES + DATE_PATCHES + NULLCHECK_PATCHES
 
 
 def _offset(elf, vaddr):
@@ -215,7 +260,8 @@ def _offset(elf, vaddr):
 
 
 def apply_all(elf, pool_sizes=None):
-    """자막·날짜·메모리 설정 패치 전부."""
+    """자막·날짜·NULL 확인(동굴 포함)·메모리 설정 패치 전부."""
+    elf = extend_text(elf)
     return apply(elf, ALL_PATCHES + memory_patches(elf, pool_sizes))
 
 

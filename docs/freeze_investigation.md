@@ -185,3 +185,13 @@ AddCategoryAllocator  Sys::FileSystem  REPLAY_GEN → GLOBAL_GEN → FRONTEND_GE
 3. 우회책 검토: 콜백에 NULL 확인을 넣는 EBOOT 패치. `0x4a5010`에서 `*(job+0x18)`가 0이면 그냥 돌아가게 한다.
    - 증상(정지)은 막지만, 바쁨 플래그가 안 지워져 리플레이 일부가 빠질 수 있다.
    - 원인 해결 전 임시 방편으로만 쓴다.
+
+
+## 임시책: 콜백 NULL 확인 (2026-10-24)
+
+- 패치(`tools/fnc/eboot.py` `NULLCHECK_PATCHES`):
+  - `0x4a5010`: `lwz r3,0x18(r3) / cmpwi r3,0 / beqlr / b 0x16a2cf0`
+  - 동굴 `0x16a2cf0`: `li r4,0 / stb r4,0(r3) / blr`
+- 코드 세그먼트(PT_LOAD #0)를 0x16a2ce8 → 0x16a2d00으로 16바이트 늘렸다. 파일과 가상 주소 모두 다음 세그먼트까지 빈 공간(0xd318바이트, 모두 0)이 있다. RPCS3 로그에서 `p_filesz=0x1692d00` 로드를 확인했다.
+- 부작용 가능성: NULL일 때는 바쁨 플래그를 지우지 못한다. 해당 리플레이 버퍼 하나가 계속 "사용 중"으로 남을 수 있다.
+- 검증: 한글판 20분 × 12회, RPCS3 0.0.42 (`work/runlogs/nullchk/`). 정지 여부와, 그 뒤 리플레이 썸네일 쓰기가 계속되는지 확인한다.

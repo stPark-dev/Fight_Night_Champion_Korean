@@ -169,7 +169,7 @@ def test_date_patch_strings_fit_slots():
 def test_real_all_patches_apply():
     if not ELF.exists():
         pytest.skip("복호화 EBOOT 없음")
-    eboot.apply(ELF.read_bytes(), eboot.ALL_PATCHES)
+    eboot.apply_all(ELF.read_bytes())
 
 
 def test_numeric_date_patch_orders_year_month_day():
@@ -203,3 +203,23 @@ def test_pool_size_patch_changes_only_digits():
     assert len(changed) == 4  # 1→6, 24→32 두 자리, 4→8
     with pytest.raises(ValueError):
         eboot.memory_patches(elf, {"FONT_GEN": 16})  # 자릿수 다름
+
+
+def test_nullcheck_patch_disassembles():
+    if not ELF.exists():
+        pytest.skip("복호화 EBOOT 없음")
+    out = eboot.apply_all(ELF.read_bytes())
+    words = lambda va, n: [struct.unpack_from(">I", out, eboot._offset(out, va + 4 * i))[0] for i in range(n)]
+    assert _dis(words(0x4A5010, 4), 0x4A5010) == [
+        "lwz r3, 0x18(r3)", "cmpwi r3, 0", "beqlr", f"b {eboot.CAVE:#x}"]
+    assert _dis(words(eboot.CAVE, 3), eboot.CAVE) == ["li r4, 0", "stb r4, 0(r3)", "blr"]
+
+
+def test_extend_text_only_grows_code_segment():
+    if not ELF.exists():
+        pytest.skip("복호화 EBOOT 없음")
+    elf = ELF.read_bytes()
+    out = eboot.extend_text(elf)
+    phoff, = struct.unpack_from(">Q", elf, 0x20)
+    assert struct.unpack_from(">QQ", out, phoff + 0x20) == (eboot.TEXT_END_NEW - 0x10000,) * 2
+    assert [i for i in range(len(elf)) if out[i] != elf[i]] and len(out) == len(elf)
