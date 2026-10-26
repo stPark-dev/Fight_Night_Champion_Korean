@@ -61,11 +61,14 @@ Windows(Git Bash)에서는 7-Zip 대신 Bandizip 콘솔(`bz x -o:work/extract �
 ### 배포 패키지
 
 ```bash
-python tools/build.py translations/ko
-python tools/release.py v0.1        # → release/FNC_Korean_v0.1/ (xdelta 차분 약 2.6MB + apply.bat)
+python tools/build.py translations/ko                                    # 일본판 → build/game
+python tools/build.py translations/ko --extract work/extract_us --elf work/eboot_us/EBOOT.elf --out build/game_us
+python tools/release.py v0.1        # → release/FNC_Korean_v0.1/ (두 판 xdelta 차분 약 5.5MB + apply.bat, zip 약 6.4MB)
 ```
 
-패키지에는 게임 데이터가 없습니다. 사용자는 자기 게임 폴더와 RPCS3로 복호화한 `EBOOT.elf`에 `apply.bat`를 적용합니다(원본 SHA-256 확인, 원본은 `*.orig`로 보존, 영어 자막 파일은 프랑스어 자막을 복제해 생성).
+한 패키지에 일본판·북미판 차분이 모두 들어갑니다. `apply.bat`이 복호화한 `EBOOT.elf`의 SHA-256으로 판을 고르고, 그 판의 원본 `boot.big`·`fe.big` 해시를 확인한 뒤 적용합니다(원본은 `*.orig`로 보존, 영어 자막 파일은 프랑스어 자막을 복제해 생성). 패키지에는 게임 데이터가 없습니다.
+
+xdelta3 3.1.0(동봉 `xdelta3.exe`)은 **GPL v2**라 라이선스 전문과 대응 소스(`xdelta3-3.1.0.tar.gz`)를 함께 넣습니다. 준비물: `work/tools/xdelta/`에 [xdelta-gpl v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0)의 `xdelta3-3.1.0.tar.gz`·`xdelta3-3.1.0-x86_64.exe.zip`(압축 해제), Linux에서는 tarball을 빌드한 `xdelta3-3.1.0/xdelta3`.
 
 ### 번역 작업 흐름
 
