@@ -87,3 +87,28 @@
 - 안전성: 원본 ELF 전체에서 재작성 블록 내부로 들어오는 외부 분기 없음(테스트 `test_no_external_branch_into_rewritten_blocks`)
 - 자막이 원래 없는 영상(`intro`, `boot_movie_*`, `transition`, `fn4_main_menu_transition_ntsc`, `mm_67a`, `mm_97~99`): 이번 실행에서 `_eng.sub` 열기 시도·실패 로그 없음. `mm_67a`/`mm_97~99`는 프랑스어판도 자막 없음(동일 조건)
 - 회귀: 세 패치 적용 빌드로 챔피언 모드 프롤로그 자막 정상 (`work/runlogs/subseq10.png`)
+
+## PoC-5: 북미판 BLUS30608 지원 (2026-10-26) — 성공
+
+원본: `Fight Night Champion (USA) (En,Fr).iso` (5,979,242,496 B — 일본판과 같은 크기), BLUS30608, APP_VER 01.00 (일본판 01.01)
+
+### 두 판의 차이 (파일 198개 비교)
+- 191개 동일: `boot.big`(번역 DB), 자막 `*.sub`, 영상, 음성 전부 같음
+- 다름: `EBOOT.BIN`, `fe.big`, 디스크 식별 파일(SFB/SFO/LIC.DAT/options.viv/PUP)
+- `fe.big`: 엔트리 목록 동일, 내용이 다른 것 6개(압축 UI 스크립트 4·설명서 프/독 2 — 일본판 01.01 수정분, 예: ○/× 교체 `A_NoSwap`). 빌드가 바꾸는 34개와 겹치지 않음 → **빌드 결과 34개 엔트리 내용이 두 판에서 바이트 단위로 같음**
+- EBOOT: 복호화 ELF 크기는 같으나 코드 세그먼트가 0x100 짧고, 구간별로 주소가 0/-0x10/-0x40/-0xc8/-0xd0/-0x100 등 어긋남 (`tools/analysis/elf_align.py`)
+
+### EBOOT 패치 이식
+- 모든 패치 지점의 명령 구조가 두 판에서 같음(나란히 역어셈블 확인). 다른 것은 rodata 주소(문자열 -0xc8 등)와 PlayMovie 함수 위치(-0xc8)뿐
+- `tools/fnc/eboot.py`: 주소를 지역 프로필(`Profile`, `PROFILES`)로 분리. 원래 명령 값도 프로필 주소로 다시 만들어 검증. EBOOT 판은 코드 세그먼트 끝으로 자동 식별(`detect_profile`)
+- 미국판 주소: `tools/analysis/relocate.py`(주변 바이트 / 즉시값을 가린 명령 패턴 검색)로 찾고, 테스트가 문자열·형식 표·원래 명령으로 검증
+- 일본판 결과 EBOOT 는 리팩터링 전과 바이트 단위 동일(테스트 고정)
+- `build.py`: 추출본 PARAM.SFO 의 TITLE_ID 와 EBOOT 판이 다르면 빌드 중단
+
+### 런타임 (RPCS3, 캡처 `work/runlogs/us_route2.png`, `us_sub_zoom.png`)
+- 타이틀 → 자동저장 안내 → (첫 실행) 프롤로그 FMV → 감옥 시합 → 게임 오버 → 메인 메뉴 → 챔피언 모드 새 게임 → 프롤로그 FMV
+- 메뉴·대화상자·저장 이름·난이도 한글, `attract_movie_eng.sub`·`mm_1_eng.sub` 열림, 프롤로그 한글 자막 표시
+- 날짜 패치·멈춤 수정 패치는 원래 명령 검증까지만 (미국판 런타임 미확인)
+
+### 미해결
+- 배포 패키지(`tools/release.py`)는 아직 일본판 원본 해시 기준 — 미국판용 차분 필요

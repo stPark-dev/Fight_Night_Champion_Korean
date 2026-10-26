@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import sys
 from collections import Counter
 from pathlib import Path
@@ -158,8 +159,27 @@ def english_subtitles(extract):
     return out
 
 
-def build_eboot(elf_path):
-    return eboot.apply_all(Path(elf_path).read_bytes())
+def title_id(extract):
+    """추출본 PS3_GAME/PARAM.SFO 의 TITLE_ID."""
+    sfo = (Path(extract) / "PS3_GAME" / "PARAM.SFO").read_bytes()
+    if sfo[:4] != b"\0PSF":
+        raise ValueError("PARAM.SFO 형식 아님")
+    keys, data, n = struct.unpack_from("<III", sfo, 0x08)
+    for i in range(n):
+        koff, _fmt, length, _max, doff = struct.unpack_from("<HHIII", sfo, 0x14 + 16 * i)
+        key = sfo[keys + koff:sfo.index(b"\0", keys + koff)]
+        if key == b"TITLE_ID":
+            return sfo[data + doff:data + doff + length].rstrip(b"\0").decode()
+    raise ValueError("PARAM.SFO 에 TITLE_ID 없음")
+
+
+def build_eboot(elf_path, extract=None):
+    """복호화 EBOOT 에 지역판 프로필 패치. extract 를 주면 디스크 타이틀 ID 와 EBOOT 판이 같은지 확인."""
+    elf = Path(elf_path).read_bytes()
+    profile = eboot.detect_profile(elf)
+    if extract is not None and title_id(extract) != profile.title:
+        raise ValueError(f"추출본은 {title_id(extract)} 인데 EBOOT 는 {profile.title} 판")
+    return eboot.apply_all(elf, profile=profile)
 
 
 PARTS = ("db", "fonts", "subs", "eboot")
@@ -215,7 +235,7 @@ def main():
     if "subs" in parts:
         files.update(english_subtitles(extract))
     if "eboot" in parts:
-        files[EBOOT] = build_eboot(args.elf)
+        files[EBOOT] = build_eboot(args.elf, args.extract)
     materialize(args.extract, args.out, files)
     for rel, data in files.items():
         print(f"{rel}  {len(data)}  sha256={hashlib.sha256(data).hexdigest()}")

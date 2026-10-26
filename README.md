@@ -1,6 +1,7 @@
 # Fight Night Champion 한글화 (PS3)
 
-EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한국어 팬 번역 프로젝트입니다.
+EA SPORTS **Fight Night Champion** PS3의 한국어 팬 번역 프로젝트입니다.
+지원 판: 일본판 **BLJM60267** (v01.01), 북미판 **BLUS30608** (v01.00).
 
 > **현재 상태: 1차 번역 완료, 화면 검수 진행 중**
 > 문자열 9,983개 중 9,556개를 번역했습니다(나머지는 곡명·브랜드·기호 등 의도적 원문 유지). RPCS3 화면 검수 1회차를 마쳤고, 배포용 패치는 아직입니다.
@@ -30,7 +31,7 @@ EA SPORTS **Fight Night Champion** PS3 일본판(**BLJM60267**, v01.01)의 한�
 
 ## 준비물
 
-- 정품 디스크에서 만든 `Fight Night Champion (Japan).iso` (BLJM60267)
+- 정품 디스크에서 만든 ISO — 일본판(BLJM60267) 또는 북미판(BLUS30608). 두 판은 데이터가 거의 같고 EBOOT 주소만 달라, 빌드가 EBOOT 판을 자동 식별하고 디스크 타이틀 ID와 다르면 멈춥니다.
 - Python 3.11+, `fontTools`, `pytest` / (분석·런타임 검증용) `capstone`, `python-xlib`
 - [RPCS3](https://rpcs3.net/) — EBOOT 복호화와 런타임 검증
 - 한글 원본 폰트: 나눔고딕 Bold (SIL OFL) — 기본 경로 `/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf`
@@ -99,7 +100,19 @@ docs/                 조사·PoC·결정 기록
 translations/         번역 입력
 ```
 
+## 북미판 빌드
+
+```bash
+7z x -owork/extract_us "Fight Night Champion (USA) (En,Fr).iso"
+mkdir -p work/eboot_us && cp work/extract_us/PS3_GAME/USRDIR/EBOOT.BIN work/eboot_us/
+rpcs3 --no-gui --decrypt "$PWD/work/eboot_us/EBOOT.BIN"
+python3 tools/build.py translations/ko --extract work/extract_us --elf work/eboot_us/EBOOT.elf --out build/game_us
+```
+
 ## EBOOT 패치 목록
+
+아래 주소는 일본판 기준입니다. 북미판 주소는 `tools/fnc/eboot.py`의 `PROFILES["BLUS30608"]`에 있습니다(PlayMovie 분기 `0xfc8800`, rodata 문자열·형식 칸은 -0xc8 이동, 동굴 `0x16a2bf0`, 나머지 코드 지점은 같은 주소).
+
 
 | 주소 | 내용 |
 |---|---|

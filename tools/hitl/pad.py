@@ -3,6 +3,7 @@
 사용: .venv/bin/python tools/hitl/pad.py <키>[:대기초] ... [--shot 파일.png]
 키 예: Return Up Down Left Right x c z s Escape
 """
+import os
 import shutil
 import sys
 import time
@@ -11,7 +12,7 @@ from pathlib import Path
 from Xlib import X, XK, display, protocol
 from Xlib.ext import xtest
 
-TITLE = "BLJM60267"
+TITLE = os.environ.get("FNC_TITLE", "BLJM60267")  # 미국판은 FNC_TITLE=BLUS30608
 SHOT_DIR = Path.home() / ".config/rpcs3/screenshots" / TITLE
 
 

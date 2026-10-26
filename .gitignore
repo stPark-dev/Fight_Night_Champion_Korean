@@ -2,6 +2,7 @@ original/
 work/
 *.iso
 *.7z
+*.zip
 .venv/
 build/
 translations/stress.json

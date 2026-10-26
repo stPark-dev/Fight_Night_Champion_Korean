@@ -233,3 +233,73 @@ def test_extend_text_only_grows_code_segment():
     phoff, = struct.unpack_from(">Q", elf, 0x20)
     assert struct.unpack_from(">QQ", out, phoff + 0x20) == (eboot.TEXT_END_NEW - 0x10000,) * 2
     assert [i for i in range(len(elf)) if out[i] != elf[i]] and len(out) == len(elf)
+
+
+# --- 지역판(일본 BLJM60267 / 북미 BLUS30608) ---------------------------
+
+US_ELF = ROOT / "work/eboot_us/EBOOT.elf"
+
+
+def _need(p):
+    if not p.exists():
+        pytest.skip(f"{p.relative_to(ROOT)} 없음")
+    return p.read_bytes()
+
+
+def test_profiles_registered():
+    assert set(eboot.PROFILES) == {"BLJM60267", "BLUS30608"}
+    assert eboot.PROFILES["BLJM60267"].eng == eboot.ENG  # 기존 이름은 일본판 값
+
+
+def test_jp_profile_output_unchanged():
+    import hashlib
+    out = eboot.apply_all(_need(ELF))
+    assert hashlib.sha256(out).hexdigest() == "f7d14125458aced9b5cf68fcddb31e53c420533330c0f22784e03aba7014eda4"
+
+
+@pytest.mark.parametrize("path,title", [(ELF, "BLJM60267"), (US_ELF, "BLUS30608")])
+def test_detect_profile(path, title):
+    assert eboot.detect_profile(_need(path)).title == title
+
+
+def test_detect_profile_rejects_unknown():
+    with pytest.raises(ValueError):
+        eboot.detect_profile(fake_elf())
+
+
+def test_us_patches_apply():
+    eboot.apply_all(_need(US_ELF))  # 모든 원래 값 검증 통과
+
+
+@pytest.mark.parametrize("path", [ELF, US_ELF])
+def test_profile_strings(path):
+    import sys
+    sys.path.insert(0, str(ROOT / "tools" / "analysis"))
+    from ppc_xref import Elf
+    _need(path)
+    e = Elf(str(path))
+    p = eboot.detect_profile(e.d)
+    s = lambda a, n: e.d[e.off(a):e.off(a) + n]
+    assert (s(p.eng, 4), s(p.fre, 4), s(p.ger, 4)) == (b"eng\0", b"fre\0", b"ger\0")
+    assert s(p.date_en_fmt, 14) == b"%s %02d, %04d\0"
+    assert s(p.date_en_fmt_noyear, 8) == b"%s %02d\0"
+    assert s(p.ko_date_ymd, 19) == b"%02d de %s de %04d\0"
+    assert s(p.ko_date_md, 11) == b"%02d de %s\0"
+    assert s(p.num_date_table + 0x78, 15) == b"%04d.%02d.%02d\0"
+    assert s(p.memcfg_at, 12) == b"AddAllocator"
+
+
+def test_us_patched_code_matches_jp_semantics():
+    """미국판 결과 코드는 일본판 결과와 주소 상수만 다르다(명령 종류·레지스터 동일)."""
+    import sys
+    sys.path.insert(0, str(ROOT / "tools" / "analysis"))
+    from relocate import _mask
+    jp, us = eboot.patches_for(eboot.PROFILES["BLJM60267"]), eboot.patches_for(eboot.PROFILES["BLUS30608"])
+    assert len(jp) == len(us)
+    code = [(a, b) for a, b in zip(jp, us) if a.vaddr < 0x1200000 or a.vaddr >= 0x1600000]
+    assert all(_mask(a.new) == _mask(b.new) for a, b in code)
+
+
+@pytest.mark.parametrize("path,title", [(ELF, "BLJM60267"), (US_ELF, "BLUS30608")])
+def test_detect_profile_after_patch(path, title):
+    assert eboot.detect_profile(eboot.apply_all(_need(path))).title == title

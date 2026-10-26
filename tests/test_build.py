@@ -163,3 +163,32 @@ def test_english_subtitles_refuse_existing_target(tmp_path):
 
 def test_ascii_chars_also_checked_against_fonts():
     assert build.needed_chars({"A": "a~가\n", "B": "|"}) == "a|~가"
+
+
+# --- 지역판 일치 --------------------------------------------------------
+
+EXTRACT_US = ROOT / "work" / "extract_us"
+ELF_JP = ROOT / "work" / "eboot" / "EBOOT.elf"
+ELF_US = ROOT / "work" / "eboot_us" / "EBOOT.elf"
+
+
+@pytest.mark.parametrize("extract,title", [(EXTRACT, "BLJM60267"), (EXTRACT_US, "BLUS30608")])
+def test_title_id_from_param_sfo(extract, title):
+    if not extract.exists():
+        pytest.skip("추출본 없음")
+    assert build.title_id(extract) == title
+
+
+@pytest.mark.parametrize("extract,elf", [(EXTRACT, ELF_US), (EXTRACT_US, ELF_JP)])
+def test_region_mismatch_fails(extract, elf):
+    if not extract.exists() or not elf.exists():
+        pytest.skip("추출본/EBOOT 없음")
+    with pytest.raises(ValueError):
+        build.build_eboot(elf, extract)
+
+
+@pytest.mark.parametrize("extract,elf", [(EXTRACT, ELF_JP), (EXTRACT_US, ELF_US)])
+def test_region_match_builds(extract, elf):
+    if not extract.exists() or not elf.exists():
+        pytest.skip("추출본/EBOOT 없음")
+    assert build.build_eboot(elf, extract)[:4] == b"\x7fELF"
