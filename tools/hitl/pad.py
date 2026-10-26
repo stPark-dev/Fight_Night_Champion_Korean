@@ -37,6 +37,9 @@ def activate(d, win):
     root.send_event(ev, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
     d.sync()
     time.sleep(0.3)
+    # 활성화 직후 첫 키가 버려지는 경우가 있어, 게임이 쓰지 않는 키로 한 번 흡수한다
+    press(d, win, "Scroll_Lock")
+    time.sleep(0.2)
 
 
 def press(d, win, key, hold=0.25):
