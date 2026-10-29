@@ -232,6 +232,12 @@ if errorlevel 1 goto :fail
 echo.
 echo 끝났습니다. RPCS3 에서 게임을 실행하십시오. (Console Language 는 기본값 English 그대로 두면 됩니다)
 echo 첫 실행은 RPCS3 가 셰이더를 만드느라 몇 분 동안 진행 막대만 보입니다. 끄지 말고 기다리십시오.
+if /i "%T%"=="BLUS30608" (
+  echo.
+  echo [북미판 필수] RPCS3 에서 동영상이 번쩍이는 것을 막으려면 이 게임만 설정을 바꾸십시오.
+  echo        게임 목록에서 오른쪽 클릭 - Create Custom Configuration From Global Settings
+  echo        - GPU 탭 - Write Color Buffers 체크 - Save custom configuration
+)
 if not defined HASU (
   echo.
   echo [주의] 업데이트 1.02 없이 패치했습니다.
@@ -355,6 +361,10 @@ RPCS3 메뉴는 한국어 번역이 없어 영어 이름으로 적었습니다.
    (Korean·Japanese 로 바꿔도 한글로 나옵니다)
    첫 실행은 RPCS3 가 셰이더를 만드느라 몇 분 동안 진행 막대만 보입니다. 멈춘 것이 아니니 기다리십시오.
    타이틀 화면에 「START / 버튼을 누르십시오」가 나오면 성공입니다.
+7. ★ 북미판(BLUS30608)은 꼭 설정하십시오 ★
+   북미판은 RPCS3 에서 동영상이 잘린 것처럼 번쩍입니다(패치하지 않은 원판도 같습니다. 일본판은 괜찮습니다).
+   RPCS3 게임 목록에서 게임을 오른쪽 클릭 → Create Custom Configuration From Global Settings →
+   GPU 탭에서 Write Color Buffers 를 체크 → Save custom configuration. 이 게임에만 적용됩니다.
 패치한 뒤에 업데이트 1.02 를 설치(또는 다시 설치)했다면 한글패치.bat 을 한 번 더 실행하십시오.
 
 [직접 적용 - apply.bat]
@@ -380,6 +390,7 @@ RPCS3 메뉴는 한국어 번역이 없어 영어 이름으로 적었습니다.
 - "RPCS3 가 실행 중": RPCS3 를 닫은 뒤 다시 실행하십시오.
 - "패치 파일이 옆에 없습니다": zip 을 연 창 안에서 바로 실행한 경우입니다. 압축을 모두 푼 뒤 푼 폴더에서 실행하십시오.
 - "설치된 업데이트가 1.02 가 아닙니다": 업데이트는 1.02 만 지원합니다. RPCS3 로 1.02 를 설치한 뒤 다시 실행하십시오.
+- 동영상이 잘린 것처럼 번쩍임(북미판): 위 7번처럼 이 게임의 Write Color Buffers 를 켜십시오.
 - 첫 실행에서 진행 막대만 몇 분 보임: RPCS3 가 셰이더를 만드는 중입니다. 두 번째 실행부터는 바로 시작합니다.
 - 패드가 안 됨(듀얼센스·듀얼쇼크): Steam 이 패드를 잡고 있으면 RPCS3 가 입력을 못 받는 일이 많습니다.
   Steam 을 완전히 종료하거나 Steam 설정 > 컨트롤러에서 PlayStation 컨트롤러 지원을 끈 뒤, 패드를 다시 꽂으십시오.
