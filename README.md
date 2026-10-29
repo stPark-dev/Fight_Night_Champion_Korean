@@ -1,7 +1,7 @@
 # Fight Night Champion 한글화 (PS3)
 
 EA SPORTS **Fight Night Champion** PS3의 한국어 팬 번역 프로젝트입니다.
-지원 판: 일본판 **BLJM60267** (v01.01), 북미판 **BLUS30608** (v01.00).
+지원 판: 일본판 **BLJM60267**, 북미판 **BLUS30608** (둘 다 게임 버전 01.00) — 두 판의 **타이틀 업데이트 1.02**도 지원.
 
 > **현재 상태: 1차 번역 완료, 화면 검수 진행 중**
 > 문자열 9,983개 중 9,556개를 번역했습니다(나머지는 곡명·브랜드·기호 등 의도적 원문 유지). RPCS3 화면 검수 1회차를 마쳤고, 배포용 패치는 아직입니다.
@@ -47,7 +47,7 @@ mkdir -p work/eboot && cp work/extract/PS3_GAME/USRDIR/EBOOT.BIN work/eboot/
 rpcs3 --no-gui --decrypt "$PWD/work/eboot/EBOOT.BIN"      # → work/eboot/EBOOT.elf
 
 # 3) 테스트
-python3 -m venv --system-site-packages .venv && .venv/bin/pip install capstone python-xlib
+python3 -m venv --system-site-packages .venv && .venv/bin/pip install capstone python-xlib pycryptodome
 .venv/bin/python -m pytest -q tests
 
 #    실데이터 테스트는 work/extract, work/eboot/EBOOT.elf, 나눔고딕이 없으면 skip 됩니다(결과의 skipped 수 확인)
@@ -111,6 +111,24 @@ mkdir -p work/eboot_us && cp work/extract_us/PS3_GAME/USRDIR/EBOOT.BIN work/eboo
 rpcs3 --no-gui --decrypt "$PWD/work/eboot_us/EBOOT.BIN"
 python3 tools/build.py translations/ko --extract work/extract_us --elf work/eboot_us/EBOOT.elf --out build/game_us
 ```
+
+## 타이틀 업데이트 1.02
+
+Sony 서버에 두 판 모두 1.02 업데이트(약 83MB)가 있고, RPCS3에 설치하면 디스크 대신 **업데이트의 EBOOT**가 실행되고, 업데이트의 DLC 데이터(`dlc_pack1/dlc/data/ps3/dlc_main.big`)에 든 **영어 `eng_us.db`**(디스크 DB + DLC 문구 44개)가 디스크 DB를 덮습니다. 그래서 디스크만 패치하면 자막이 나오지 않고 화면 일부가 영어로 돌아갑니다.
+
+- 업데이트 EBOOT: 두 판의 코드가 같아(빌드 날짜 문자열 등만 다름) 프로필 `UPDATE_1.02` 하나로 같은 패치를 넣습니다.
+- DLC: `eng_us.db`를 한국어로(DLC 문구 44개는 `translations/ko/DLC.json`), 진영 선택 그림도 교체하고, `dlc.toc`의 파일 크기를 고칩니다.
+- 북미판 DLC는 NPDRM EDAT로 암호화돼 있어 `tools/fnc/edat.py`로 풀고 다시 암호화합니다(게임의 klicensee 사용, ECDSA 서명은 다시 만들 수 없어 **RPCS3 전용**).
+
+```bash
+# 업데이트 pkg 를 풀어 둔 폴더(USRDIR 가 들어 있는 폴더)와 복호화한 업데이트 EBOOT 를 지정
+python tools/analysis/ps3pkg.py <업데이트.pkg> work/updates/jp_102
+rpcs3 --no-gui --decrypt "$PWD/work/eboot_jp102/EBOOT.BIN"
+python tools/build.py translations/ko --update work/updates/jp_102 --update-elf work/eboot_jp102/EBOOT.elf
+#   → build/game (디스크), build/game_update (업데이트 설치 폴더에 넣을 파일)
+```
+
+배포 패키지의 `apply.bat`은 두 번째 인자로 업데이트 폴더(RPCS3 `dev_hdd0/game/<ID>`)를 받아 함께 패치합니다.
 
 ## EBOOT 패치 목록
 

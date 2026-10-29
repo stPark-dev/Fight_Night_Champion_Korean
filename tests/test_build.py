@@ -1,5 +1,6 @@
 import io
 import json
+import struct
 from pathlib import Path
 
 import pytest
@@ -192,3 +193,85 @@ def test_region_match_builds(extract, elf):
     if not extract.exists() or not elf.exists():
         pytest.skip("추출본/EBOOT 없음")
     assert build.build_eboot(elf, extract)[:4] == b"\x7fELF"
+
+
+# --- 타이틀 업데이트 1.02 -----------------------------------------------
+
+UPD = {"BLJM60267": ROOT / "work/updates/jp_102", "BLUS30608": ROOT / "work/updates/us_102"}
+UPD_ELF = {"BLJM60267": ROOT / "work/eboot_jp102/EBOOT.elf", "BLUS30608": ROOT / "work/eboot_us102/EBOOT.elf"}
+DLC_ID = "TXT_BARE_KNUCKLES_MODE"
+
+
+def _need_update(title):
+    if not UPD[title].exists() or not UPD_ELF[title].exists():
+        pytest.skip(f"{title} 1.02 업데이트 추출본/복호화 EBOOT 없음")
+
+
+def test_disc_build_accepts_dlc_only_ids_when_declared():
+    if not EXTRACT.exists() or not HANGUL_SRC.exists():
+        pytest.skip("원본 추출본/폰트 없음")
+    tr = {**POC, DLC_ID: "맨주먹 모드"}
+    with pytest.raises(KeyError):
+        build.build_files(EXTRACT, tr, HANGUL_SRC)
+    files = build.build_files(EXTRACT, tr, HANGUL_SRC, extra_ids={DLC_ID})
+    db = t3db.LanguageDB.parse(chunkzip.unpack(eb.Archive.parse(files[build.BOOT_BIG]).read(build.ENG_DB)))
+    assert DLC_ID not in db.by_id()
+
+
+@pytest.fixture(scope="module")
+def translations_ko():
+    return build.load_translations(ROOT / "translations/ko")
+
+
+@pytest.mark.parametrize("title", ["BLJM60267", "BLUS30608"])
+def test_build_update(title, translations_ko):
+    _need_update(title)
+    files = build.build_update(UPD[title], UPD_ELF[title], translations_ko)
+    us = title == "BLUS30608"
+    sfx = ".edat" if us else ""
+    main, toc = f"USRDIR/dlc_pack1/dlc/data/ps3/dlc_main.big{sfx}", f"USRDIR/dlc_pack1/dlc.toc{sfx}"
+    assert set(files) == {"USRDIR/EBOOT.BIN", main, toc}
+    assert files["USRDIR/EBOOT.BIN"][:4] == b"\x7fELF"
+    from fnc import edat
+    plain = (lambda b: edat.decrypt(b, edat.FNC_KLIC)) if us else (lambda b: b)
+    big = plain(files[main])
+    arc = eb.Archive.parse(big)
+    db = t3db.LanguageDB.parse(chunkzip.unpack(arc.read(build.ENG_DB))).by_id()
+    assert db[DLC_ID].text == "맨주먹 모드"
+    assert db["TXT_PRESS_START_LINE_2"].text == translations_ko["TXT_PRESS_START_LINE_2"]
+    # dlc.toc 의 dlc_main.big 크기가 새 크기
+    sizes = [struct.unpack_from(">I", plain(files[toc]), 0x10 + 12 * i + 8)[0] for i in range(4)]
+    assert len(big) in sizes
+    # 진영 선택 그림도 DLC 쪽에서 교체
+    orig = eb.Archive.parse(plain((UPD[title] / main).read_bytes()))
+    sel = "data/ps3/fe/game/screens/playnow/01_boxerselect.big"
+    assert arc.read(sel) != orig.read(sel)
+
+
+def test_update_dlc_same_plaintext_both_regions(translations_ko):
+    _need_update("BLJM60267"), _need_update("BLUS30608")
+    from fnc import edat
+    jp = build.build_update(UPD["BLJM60267"], UPD_ELF["BLJM60267"], translations_ko)
+    us = build.build_update(UPD["BLUS30608"], UPD_ELF["BLUS30608"], translations_ko)
+    assert edat.decrypt(us["USRDIR/dlc_pack1/dlc/data/ps3/dlc_main.big.edat"], edat.FNC_KLIC) == \
+        jp["USRDIR/dlc_pack1/dlc/data/ps3/dlc_main.big"]
+
+
+def test_param_sfo_reads_update_version():
+    if not UPD["BLJM60267"].exists():
+        pytest.skip("업데이트 추출본 없음")
+    info = build.param_sfo(UPD["BLJM60267"] / "PARAM.SFO")
+    assert info["TITLE_ID"] == "BLJM60267" and info["APP_VER"] == "01.02"
+
+
+def test_build_update_rejects_non_102_folder(tmp_path, translations_ko):
+    _need_update("BLJM60267")
+    import shutil
+    fake = tmp_path / "upd"
+    shutil.copytree(UPD["BLJM60267"], fake, copy_function=lambda s, d: shutil.copy(s, d))
+    sfo = bytearray((fake / "PARAM.SFO").read_bytes())
+    i = sfo.index(b"01.02")
+    sfo[i:i + 5] = b"01.01"
+    (fake / "PARAM.SFO").write_bytes(bytes(sfo))
+    with pytest.raises(ValueError):
+        build.build_update(fake, UPD_ELF["BLJM60267"], translations_ko)

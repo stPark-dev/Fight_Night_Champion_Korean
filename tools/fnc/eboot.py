@@ -89,6 +89,8 @@ class Profile:
     replay_cb_opd: int = 0x16C8D60
     worker_done: int = 0x7BC0C8
     cancel_done: int = 0x7BB96C
+    worker_job: int = 25     # 일꾼 완료 기록 `stw res,8(job)` 의 레지스터
+    worker_res: int = 5
 
     @property
     def cave(self):
@@ -102,6 +104,14 @@ PROFILES = {p.title: p for p in (
     Profile("BLUS30608", text_end=0x16A2BE8, eng=0x12C58E4, fre=0x12C8AE8, ger=0x12C58F4,
             playmovie_cmp=0xFC87F8, date_en_fmt=0x12D2E10, date_en_fmt_noyear=0x12D2E20,
             ko_date_ymd=0x12D2E28, ko_date_md=0x12D2E40, num_date_table=0x12D2D00, memcfg_at=0x12B6CA2),
+    # 타이틀 업데이트 1.02 (BLJM60267_T4 / BLUS30608_T1): 두 판의 EBOOT 코드가 같다(빌드 날짜 문자열 등만 다름).
+    # 주소는 relocate.py + 명령 패턴 검색으로 찾았다(docs/poc.md PoC-6). 일꾼 완료 기록 레지스터가 다르다.
+    Profile("UPDATE_1.02", text_end=0x16AEDE8, eng=0x12D6908, fre=0x12D9C90, ger=0x12D6918,
+            playmovie_cmp=0xFE915C, date_en_fmt=0x12D05DC, date_en_fmt_noyear=0x12D05EC,
+            ko_date_ymd=0x12D05F4, ko_date_md=0x12D060C, num_date_table=0x12D04CC, memcfg_at=0x12C2442,
+            bootflow_li=0x30EA08, suffix_fn=0x3113D4, lang=0x1724944, date_en=0x241638, date_num=0x241280,
+            replay_cb=0x4AC540, replay_cb_opd=0x16C8DE0, worker_done=0x7C3948, cancel_done=0x7C31CC,
+            worker_job=23, worker_res=22),  # 두 판(BLJM60267·BLUS30608) 업데이트 공통
 )}
 JP = PROFILES["BLJM60267"]
 ENG, FRE, GER = JP.eng, JP.fre, JP.ger  # 기존 이름(일본판)
@@ -337,7 +347,7 @@ def _caves(p=JP):
     cb_at = p.cave
     cb = [asm.lwz(5, 0x18, 3), asm.cmpwi(5, 0), BNELR, _li(11, MARK_SYSCALL), SC, asm.BLR]
     w_at = cb_at + 4 * len(cb)
-    worker = _clear_then_done(w_at, job=25, cb=4, res=5, t=(6, 7), opd=p.replay_cb_opd)
+    worker = _clear_then_done(w_at, job=p.worker_job, cb=4, res=p.worker_res, t=(6, 7), opd=p.replay_cb_opd)
     c_at = w_at + 4 * len(worker)
     cancel = _clear_then_done(c_at, job=30, cb=None, res=4, t=(6, 7), opd=p.replay_cb_opd)
     return [(cb_at, cb), (w_at, worker), (c_at, cancel)]
@@ -346,7 +356,7 @@ def _caves(p=JP):
 def race_patches(p=JP):
     (cb_at, _), (w_at, _), (c_at, _) = _caves(p)
     out = [Patch(p.replay_cb, 0x80630018, asm.b(p.replay_cb, cb_at), "리플레이 쓰기 콜백: 쓰지 않고 경쟁 횟수만 표시"),
-           Patch(p.worker_done, _stw(5, 8, 25), _bl(p.worker_done, w_at), "일꾼: 플래그 지운 뒤 완료 기록"),
+           Patch(p.worker_done, _stw(p.worker_res, 8, p.worker_job), _bl(p.worker_done, w_at), "일꾼: 플래그 지운 뒤 완료 기록"),
            Patch(p.cancel_done, _stw(4, 8, 30), _bl(p.cancel_done, c_at), "일꾼(취소): 플래그 지운 뒤 완료 기록")]
     for at, words in _caves(p):
         out += [Patch(at + 4 * i, 0, w, f"동굴 {at + 4 * i:#x}") for i, w in enumerate(words)]

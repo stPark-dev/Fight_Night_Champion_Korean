@@ -90,7 +90,7 @@
 
 ## PoC-5: 북미판 BLUS30608 지원 (2026-10-26) — 성공
 
-원본: `Fight Night Champion (USA) (En,Fr).iso` (5,979,242,496 B — 일본판과 같은 크기), BLUS30608, APP_VER 01.00 (일본판 01.01)
+원본: `Fight Night Champion (USA) (En,Fr).iso` (5,979,242,496 B — 일본판과 같은 크기), BLUS30608, APP_VER 01.00 (일본판도 APP_VER 01.00 — PARAM.SFO 의 `VERSION` 01.01 을 버전으로 잘못 적었던 것을 2026-10-29 제보로 바로잡음)
 
 ### 두 판의 차이 (파일 198개 비교)
 - 191개 동일: `boot.big`(번역 DB), 자막 `*.sub`, 영상, 음성 전부 같음
@@ -112,3 +112,29 @@
 
 ### 미해결
 - 배포 패키지(`tools/release.py`)는 아직 일본판 원본 해시 기준 — 미국판용 차분 필요
+
+## PoC-6: 타이틀 업데이트 1.02 지원 (2026-10-29) — 성공
+
+계기: 제보 "패치 후 챔피언 모드 동영상에 자막이 안 나옴". RPCS3 0.0.43-20413 별도 설정(`work/rpcs3_upd`, `work/rpcs3_clean`)으로 재현.
+
+### 원인 (재현)
+- 두 판 모두 Sony 서버에 1.02 업데이트(BLJM60267_T4 / BLUS30608_T1, 약 83MB). 설치 시 RPCS3 가 `Updates found` 후 **업데이트 EBOOT** 를 실행 → 디스크 EBOOT 패치가 빠져 `mm_1_eng.sub` 를 열지 않음
+- 업데이트의 `dlc_pack1/dlc/data/ps3/dlc_main.big`(EB v3)에 영어 `eng_us.db`(10,063 행 = 디스크 10,019 + DLC 44, 변경 1)와 UI 화면 15개(진영 선택 `01_boxerselect.big` 포함)가 있고, DLC 가 올라온 뒤 디스크 DB 를 덮음 → 게임 오버 화면부터 영어
+- 타이틀·자동저장 안내는 DLC 로드 전이라 한글
+
+### 업데이트 구조
+- pkg: PS3 retail PKG(`tools/analysis/ps3pkg.py`). EBOOT.BIN(13MB SELF), dlc_pack1(info.dlc, dlc.toc, dlc_main.big, dlc_ge_char.big, fn_store_images.big)
+- 일본판 DLC 는 평문, 북미판은 같은 파일이 NPDRM EDAT(NPD v3, 라이선스 3, 플래그 0x3C, 블록 0x4000). 북미판 EDAT 를 풀면 일본판 평문과 **바이트 단위로 같다**
+- klicensee: 게임이 실행 중 스택에서 만들어 `sceNpDrmIsAvailable` 에 넘김(정적 검색으로 못 찾음) → RPCS3 로그 `KLIC=0x0eac00000be57f15754f17e0000f71cc`, 5개 EDAT 의 dev_hash 로 확인
+- `dlc.toc`: `DLC_TOC_` u32 버전, u32 개수, (8바이트 값, u32 크기)×4. 8바이트 값은 내용 해시가 아님(크기만 고친 수정본이 그대로 로드됨)
+
+### 패치
+- EBOOT: 프로필 `UPDATE_1.02`(두 판 공통). 주소는 relocate.py + 명령 패턴 검색. 자막 접미사 함수 0x3113d4(언어 전역 0x1724944), 부트플로 0x30ea08, PlayMovie 0xfe915c, 날짜 0x241638/0x241280, 리플레이 콜백 0x4ac540(OPD 0x16c8de0), 일꾼 완료 0x7c3948(`stw r22,8(r23)` — 원본과 레지스터 다름), 취소 0x7c31cc, 동굴 0x16aedf0
+- DLC: `eng_us.db` 를 번역으로(디스크 번역 9,558 + DLC 44), 진영 선택 그림 교체(DLC 쪽 원본 텍스처도 같은 SHA-1), `dlc.toc` 크기 수정
+- EDAT(`tools/fnc/edat.py`): RPCS3 unedat.cpp 형식대로 블록 AES-CBC + HMAC-SHA1, 헤더/메타데이터 CMAC 재계산. 원본 평문으로 다시 암호화하면 원본과 바이트 단위 동일(테스트). ECDSA 서명은 원본 그대로(RPCS3 미검사) → 실기 불가
+
+### 확인 (RPCS3 0.0.43-20413)
+- 일본판+1.02(수정): 프롤로그 한글 자막(`mm_1_eng.sub` 열림), 게임 오버·메인 메뉴·게임 모드·바로 시합 설정 한글, 진영 선택 배경 한글 그림, DLC 로드(dlc_main.big·dlc_ge_char.big·DLC 음성)
+- 북미판+1.02(수정): 프롤로그 한글 자막, 게임 오버 한글, 재암호화한 `dlc_main.big.edat` 를 새 크기(0x16b39a0)로 열고 복호화·해시 오류 0건
+- 업데이트 없이(북미판, 20413): 자막·한글 정상, 동영상 이상 재현 안 됨 — 제보의 "동영상 이상"은 미재현(제보자 환경 Windows/RTX 5070)
+- apply.bat(wine, certutil 대체): 두 판 × 업데이트 폴더 지정 시 결과가 빌드와 바이트 단위 같음, 원본 업데이트 파일 보존, 일본판 디스크 + 북미판 업데이트는 아무 파일도 바꾸지 않고 중단

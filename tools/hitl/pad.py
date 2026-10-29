@@ -13,7 +13,8 @@ from Xlib import X, XK, display, protocol
 from Xlib.ext import xtest
 
 TITLE = os.environ.get("FNC_TITLE", "BLJM60267")  # 미국판은 FNC_TITLE=BLUS30608
-SHOT_DIR = Path.home() / ".config/rpcs3/screenshots" / TITLE
+RPCS3_DIR = Path(os.environ.get("FNC_RPCS3_DIR", Path.home() / ".config/rpcs3"))  # 별도 설정(XDG_CONFIG_HOME)으로 띄웠을 때
+SHOT_DIR = RPCS3_DIR / "screenshots" / TITLE
 
 
 def find_window(d):

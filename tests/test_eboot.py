@@ -8,6 +8,8 @@ from fnc import eboot
 
 ROOT = Path(__file__).resolve().parents[1]
 ELF = ROOT / "work/eboot/EBOOT.elf"
+JP102_ELF = ROOT / "work/eboot_jp102/EBOOT.elf"
+US102_ELF = ROOT / "work/eboot_us102/EBOOT.elf"
 
 
 def fake_elf():
@@ -126,14 +128,17 @@ def _branch_targets(data, base):
     return out
 
 
-@pytest.mark.parametrize("start,end", [(0x28CC0C, 0x28CC50), (0xFC88C8, 0xFC88FC)])
-def test_no_external_branch_into_rewritten_blocks(start, end):
-    if not ELF.exists():
+@pytest.mark.parametrize("elf,start,end", [
+    (ELF, 0x28CC0C, 0x28CC50), (ELF, 0xFC88C8, 0xFC88FC),
+    (JP102_ELF, 0x3113D4, 0x311418), (JP102_ELF, 0xFE9164, 0xFE9198),
+])
+def test_no_external_branch_into_rewritten_blocks(elf, start, end):
+    if not elf.exists():
         pytest.skip("복호화 EBOOT 없음")
     import sys
     sys.path.insert(0, str(ROOT / "tools" / "analysis"))
     from ppc_xref import Elf
-    e = Elf(str(ELF))
+    e = Elf(str(elf))
     v, o, sz = e.code_segs()[0]
     inside = [(at, t) for at, t in _branch_targets(e.d[o:o + sz], v)
               if start < t < end and not start <= at < end]
@@ -247,7 +252,7 @@ def _need(p):
 
 
 def test_profiles_registered():
-    assert set(eboot.PROFILES) == {"BLJM60267", "BLUS30608"}
+    assert set(eboot.PROFILES) == {"BLJM60267", "BLUS30608", "UPDATE_1.02"}
     assert eboot.PROFILES["BLJM60267"].eng == eboot.ENG  # 기존 이름은 일본판 값
 
 
@@ -257,7 +262,10 @@ def test_jp_profile_output_unchanged():
     assert hashlib.sha256(out).hexdigest() == "f7d14125458aced9b5cf68fcddb31e53c420533330c0f22784e03aba7014eda4"
 
 
-@pytest.mark.parametrize("path,title", [(ELF, "BLJM60267"), (US_ELF, "BLUS30608")])
+ALL_ELFS = [(ELF, "BLJM60267"), (US_ELF, "BLUS30608"), (JP102_ELF, "UPDATE_1.02"), (US102_ELF, "UPDATE_1.02")]
+
+
+@pytest.mark.parametrize("path,title", ALL_ELFS)
 def test_detect_profile(path, title):
     assert eboot.detect_profile(_need(path)).title == title
 
@@ -271,7 +279,7 @@ def test_us_patches_apply():
     eboot.apply_all(_need(US_ELF))  # 모든 원래 값 검증 통과
 
 
-@pytest.mark.parametrize("path", [ELF, US_ELF])
+@pytest.mark.parametrize("path", [p for p, _ in ALL_ELFS])
 def test_profile_strings(path):
     import sys
     sys.path.insert(0, str(ROOT / "tools" / "analysis"))
@@ -300,6 +308,18 @@ def test_us_patched_code_matches_jp_semantics():
     assert all(_mask(a.new) == _mask(b.new) for a, b in code)
 
 
-@pytest.mark.parametrize("path,title", [(ELF, "BLJM60267"), (US_ELF, "BLUS30608")])
+@pytest.mark.parametrize("path,title", ALL_ELFS)
 def test_detect_profile_after_patch(path, title):
     assert eboot.detect_profile(eboot.apply_all(_need(path))).title == title
+
+
+@pytest.mark.parametrize("path", [JP102_ELF, US102_ELF])
+def test_update_102_patches_apply(path):
+    eboot.apply_all(_need(path))  # 모든 원래 값 검증 통과
+
+
+def test_update_102_worker_registers():
+    p = eboot.PROFILES["UPDATE_1.02"]
+    assert (p.worker_job, p.worker_res) == (23, 22)
+    patches = {x.vaddr: x for x in eboot.race_patches(p)}
+    assert patches[p.worker_done].old == 0x92D70008  # stw r22,8(r23)
