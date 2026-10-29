@@ -174,3 +174,42 @@ def test_readme_uses_real_rpcs3_menu_names_and_move_step():
                   "File > Add Games", "Console Language"):
         assert label in text
     assert "SELF 복호화" not in text and "옮깁니다" in text
+
+
+# --- 간편 적용 (한글패치.bat) -------------------------------------------
+
+def test_easy_bat_flow():
+    text = release.easy_bat("v1")
+    assert "\r\n" in text and text.startswith("@echo off")
+    # 인자가 없으면 폴더 선택 창, PowerShell 이 없으면 직접 입력
+    assert "FolderBrowserDialog" in text and "set /p" in text
+    # RPCS3 로 복호화: GUI 프로그램이라 start /wait, 원본은 .orig 우선, 임시 폴더에서
+    assert 'start "" /wait "%RP%\\rpcs3.exe" --no-gui --decrypt' in text
+    assert 'if exist "%~1.orig" set "SRC=%~1.orig"' in text
+    # dev_hdd0 위치: config\vfs.yml → vfs.yml → 기본값
+    assert "config\\vfs.yml" in text and "/dev_hdd0/: " in text and "$(EmulatorDir)" in text
+    # 업데이트 1.02 자동 감지 후 apply.bat 호출
+    assert "13370336" in text  # 업데이트 1.02 EBOOT.BIN 크기로 감지
+    assert 'call "%HERE%apply.bat" "%G%" "%U%"' in text and 'call "%HERE%apply.bat" "%G%"' in text
+    # RPCS3 가 실행 중이면 중단, 창이 바로 닫히지 않게 pause
+    assert "rpcs3.exe" in text and "pause" in text
+
+
+def test_package_has_easy_bat_and_readme_simple_steps(tmp_path):
+    text = release.README.format(version="v1")
+    assert "한글패치.bat" in text and "7-Zip" in text
+
+
+def test_zip_marks_korean_names_utf8(tmp_path):
+    """한글 파일 이름(한글패치.bat, 읽어주세요.txt)이 Windows 기본 압축 풀기에서 깨지지 않도록 UTF-8 표시."""
+    import zipfile
+    d = tmp_path / "FNC_Korean_v0.9.6"
+    (d / "patch").mkdir(parents=True)
+    (d / "한글패치.bat").write_text("x")
+    (d / "patch" / "a.xdelta").write_bytes(b"1")
+    z = release.zip_package(d)
+    assert z.name == "FNC_Korean_v0.9.6.zip"
+    with zipfile.ZipFile(z) as f:
+        info = {i.filename: i for i in f.infolist()}
+        assert set(info) == {"한글패치.bat", "patch/a.xdelta"}
+        assert info["한글패치.bat"].flag_bits & 0x800

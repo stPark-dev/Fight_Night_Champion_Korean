@@ -19,7 +19,7 @@ EA SPORTS **Fight Night Champion** PS3의 한국어 팬 번역 프로젝트입�
 | 번역 | 1차 완료 9,556/9,983 (온라인 OSDK 포함 전체. 오프라인 흐름에도 OSDK 문구가 나와 범위 확대) |
 | 화면 검수 (칸 폭·쓰임새 불명 항목) | 1회차 완료(메뉴·레거시 초반·시합 HUD) — [`docs/qa.md`](docs/qa.md) |
 | 그림 글자 | 진영 선택 화면·게임 설명서 25쪽 한글화 (경기장·브랜드 로고는 유지) — `assets/` |
-| 배포 | xdelta 패치 + `apply.bat` (RPCS3 전용, 실기용 EBOOT 서명 미결정) |
+| 배포 | xdelta 패치 + `한글패치.bat`(간편 설치) / `apply.bat`(수동) (RPCS3 전용, 실기용 EBOOT 서명 미결정) |
 
 상세 기록: [`docs/survey.md`](docs/survey.md) (초기 조사), [`docs/poc.md`](docs/poc.md) (PoC 1~4), [`docs/decisions.md`](docs/decisions.md) (결정 기록), [`docs/style.md`](docs/style.md)·[`docs/glossary.md`](docs/glossary.md) (번역 규칙·용어집), [`docs/qa.md`](docs/qa.md) (화면 확인 목록)
 
@@ -63,10 +63,12 @@ Windows(Git Bash)에서는 7-Zip 대신 Bandizip 콘솔(`bz x -o:work/extract �
 ```bash
 python tools/build.py translations/ko                                    # 일본판 → build/game
 python tools/build.py translations/ko --extract work/extract_us --elf work/eboot_us/EBOOT.elf --out build/game_us
-python tools/release.py v0.1        # → release/FNC_Korean_v0.1/ (두 판 xdelta 차분 약 5.5MB + apply.bat, zip 약 6.4MB)
+python tools/release.py v0.1        # → release/FNC_Korean_v0.1/ 과 .zip (한글 파일 이름에 UTF-8 표시)
 ```
 
 한 패키지에 일본판·북미판 차분이 모두 들어갑니다. `apply.bat`이 복호화한 `EBOOT.elf`의 SHA-256으로 판을 고르고, 그 판의 원본 `boot.big`·`fe.big` 해시를 확인한 뒤 적용합니다(원본은 `*.orig`로 보존, 영어 자막 파일은 프랑스어 자막을 복제해 생성). 패키지에는 게임 데이터가 없습니다.
+
+`한글패치.bat`은 사용자용 간편 설치입니다. 더블클릭하면 게임 폴더(ISO를 7-Zip으로 푼 폴더)와 RPCS3 폴더를 고르게 하고, `rpcs3.exe --no-gui --decrypt`로 EBOOT를 복호화한 뒤, RPCS3 `dev_hdd0`(`config/vfs.yml`로 옮긴 경우 포함)에서 1.02 업데이트를 찾으면 그것까지 넣어 `apply.bat`을 부릅니다. RPCS3가 실행 중이면 멈춥니다.
 
 xdelta3 3.1.0(동봉 `xdelta3.exe`)은 **GPL v2**라 라이선스 전문과 대응 소스(`xdelta3-3.1.0.tar.gz`)를 함께 넣습니다. 준비물: `work/tools/xdelta/`에 [xdelta-gpl v3.1.0](https://github.com/jmacd/xdelta-gpl/releases/tag/v3.1.0)의 `xdelta3-3.1.0.tar.gz`·`xdelta3-3.1.0-x86_64.exe.zip`(압축 해제), Linux에서는 tarball을 빌드한 `xdelta3-3.1.0/xdelta3`.
 
