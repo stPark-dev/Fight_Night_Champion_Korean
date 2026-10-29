@@ -193,7 +193,7 @@ echo.
 if not exist "%HERE%apply.bat" goto :nopkg
 if not exist "%HERE%xdelta3.exe" goto :nopkg
 if not exist "%HERE%patch\" goto :nopkg
-tasklist /fi "imagename eq rpcs3.exe" 2>nul | find /i "rpcs3.exe" >nul && (echo RPCS3 가 실행 중입니다. RPCS3 를 닫은 뒤 다시 실행하십시오. & goto :fail)
+tasklist /fi "imagename eq rpcs3.exe" 2>nul | "%SystemRoot%\System32\find.exe" /i "rpcs3.exe" >nul && (echo RPCS3 가 실행 중입니다. RPCS3 를 닫은 뒤 다시 실행하십시오. & goto :fail)
 
 rem 1. 게임 폴더 (인자 또는 선택 창)
 set "G=%~1"
