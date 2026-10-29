@@ -179,7 +179,7 @@ def test_readme_uses_real_rpcs3_menu_names_and_move_step():
 # --- 간편 적용 (한글패치.bat) -------------------------------------------
 
 def test_easy_bat_flow():
-    text = release.easy_bat("v1")
+    text = release.easy_bat("v1", {"BLJM60267": "a" * 64})
     assert "\r\n" in text and text.startswith("@echo off")
     # 인자가 없으면 폴더 선택 창, PowerShell 이 없으면 직접 입력
     assert "FolderBrowserDialog" in text and "set /p" in text
@@ -187,7 +187,7 @@ def test_easy_bat_flow():
     assert 'start "" /wait "%RP%\\rpcs3.exe" --no-gui --decrypt' in text
     assert 'if exist "%~1.orig" set "SRC=%~1.orig"' in text
     # dev_hdd0 위치: config\vfs.yml → vfs.yml → 기본값
-    assert "config\\vfs.yml" in text and "/dev_hdd0/: " in text and "$(EmulatorDir)" in text
+    assert "config\\vfs.yml" in text and "/dev_hdd0/:" in text and "$(EmulatorDir)" in text
     # 업데이트 1.02 자동 감지 후 apply.bat 호출
     assert "13370336" in text  # 업데이트 1.02 EBOOT.BIN 크기로 감지
     assert 'call "%HERE%apply.bat" "%G%" "%U%"' in text and 'call "%HERE%apply.bat" "%G%"' in text

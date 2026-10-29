@@ -190,6 +190,9 @@ setlocal EnableExtensions
 set "HERE=%~dp0"
 echo 파이트 나이트 챔피언 한글 패치 {version} - 간편 적용
 echo.
+if not exist "%HERE%apply.bat" goto :nopkg
+if not exist "%HERE%xdelta3.exe" goto :nopkg
+if not exist "%HERE%patch\" goto :nopkg
 tasklist /fi "imagename eq rpcs3.exe" 2>nul | find /i "rpcs3.exe" >nul && (echo RPCS3 가 실행 중입니다. RPCS3 를 닫은 뒤 다시 실행하십시오. & goto :fail)
 
 rem 1. 게임 폴더 (인자 또는 선택 창)
@@ -206,25 +209,23 @@ if "%RP%"=="" goto :fail
 if "%RP:~-1%"=="\" set "RP=%RP:~0,-1%"
 if not defined FNC_TEST_DECRYPT if not exist "%RP%\rpcs3.exe" (echo rpcs3.exe 가 없습니다: "%RP%" & goto :fail)
 
-rem 3. 업데이트 1.02 가 설치돼 있는지 (RPCS3 의 dev_hdd0). 1.02 는 EBOOT.BIN 크기로 알아본다(두 판 13370336 바이트).
-rem    디스크 판(일본/북미)은 apply.bat 이 EBOOT 해시로 확인하고, 업데이트와 판이 다르면 멈춘다.
+rem 3. 디스크 EBOOT 복호화 후 SHA-256 으로 판(일본/북미)을 정한다 (apply.bat 과 같은 기준)
+call :decrypt "%G%\PS3_GAME\USRDIR\EBOOT.BIN" "%G%\EBOOT.elf" || goto :fail
+call :hash "%G%\EBOOT.elf"
+set "T="
+{regions}
+if not defined T (echo 지원하지 않는 디스크입니다. 지원: {titles} 게임 버전 01.00 & goto :fail)
+echo 디스크: %T%
+
+rem 4. 그 판의 업데이트가 RPCS3 dev_hdd0 에 있으면 1.02 인지 EBOOT.BIN 크기(13370336 바이트)로 확인
 call :hdd0
-set "UJ=" & set "UU="
-call :is102 "%HDD0%\game\BLJM60267" && set "UJ=1"
-call :is102 "%HDD0%\game\BLUS30608" && set "UU=1"
-set "U="
-if defined UJ if not defined UU set "U=%HDD0%\game\BLJM60267"
-if defined UU if not defined UJ set "U=%HDD0%\game\BLUS30608"
-if defined UJ if defined UU call :pickupdate
+call :update || goto :fail
 set "HASU="
 if defined U set "HASU=1"
 if defined HASU (echo 업데이트 1.02: 있음 - 함께 패치합니다 "%U%") else (echo 업데이트 1.02: 없음)
-
-rem 5. RPCS3 로 EBOOT 복호화
-call :decrypt "%G%\PS3_GAME\USRDIR\EBOOT.BIN" "%G%\EBOOT.elf" || goto :fail
 if defined HASU call :decrypt "%U%\USRDIR\EBOOT.BIN" "%U%\EBOOT.elf" || goto :fail
 
-rem 6. 적용 (해시 확인 후)
+rem 5. 적용 (해시 확인 후)
 echo.
 if defined HASU (call "%HERE%apply.bat" "%G%" "%U%") else (call "%HERE%apply.bat" "%G%")
 if errorlevel 1 goto :fail
@@ -234,6 +235,8 @@ echo 나중에 업데이트 1.02 를 설치하면 이 파일을 한 번 더 실�
 pause
 exit /b 0
 
+:nopkg
+echo 패치 파일이 옆에 없습니다. 받은 zip 의 압축을 모두 푼 뒤, 푼 폴더에서 이 파일을 실행하십시오.
 :fail
 echo.
 echo 중단했습니다. 위 메시지를 확인하십시오. 게임 파일은 확인 단계에서 멈췄다면 바뀌지 않았습니다.
@@ -241,61 +244,61 @@ pause
 exit /b 1
 
 :pick
-rem %1 안내문, %2 결과 변수. 선택 창(PowerShell)이 안 되면 직접 입력.
+rem %1 안내문, %2 결과 변수. 선택 창(PowerShell, 맨 앞에 띄움)이 안 되면 직접 입력.
 set "%~2="
 set "FNC_DESC=%~1"
-for /f "usebackq delims=" %%P in (`powershell -NoProfile -STA -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Add-Type -AssemblyName System.Windows.Forms; $d=New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description=$env:FNC_DESC; if($d.ShowDialog() -eq 'OK'){{$d.SelectedPath}}" 2^>nul`) do set "%~2=%%P"
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -STA -Command "[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding $false; Add-Type -AssemblyName System.Windows.Forms; $f=New-Object System.Windows.Forms.Form; $f.TopMost=$true; $d=New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description=$env:FNC_DESC; if($d.ShowDialog($f) -eq 'OK'){{$d.SelectedPath}}" 2^>nul`) do set "%~2=%%P"
 if defined %~2 exit /b 0
 echo %~1
 set /p "%~2=경로를 입력하십시오: "
 if defined %~2 call set "%~2=%%%~2:"=%%"
 exit /b 0
 
-:is102
-rem %1 업데이트 폴더. 이미 패치했다면 EBOOT.BIN.orig 가 원본.
-set "EB=%~1\USRDIR\EBOOT.BIN"
+:update
+rem U = 디스크 판의 업데이트 폴더. 없으면 비우고 성공, 1.02 가 아니면 실패. 이미 패치했다면 EBOOT.BIN.orig 가 원본.
+set "U=%HDD0%\game\%T%"
+set "EB=%U%\USRDIR\EBOOT.BIN"
 if exist "%EB%.orig" set "EB=%EB%.orig"
-if not exist "%EB%" exit /b 1
-for %%A in ("%EB%") do if "%%~zA"=="13370336" exit /b 0
+if not exist "%EB%" (set "U=" & exit /b 0)
+for %%A in ("%EB%") do set "EBZ=%%~zA"
+if "%EBZ%"=="13370336" exit /b 0
+echo 설치된 업데이트가 1.02 가 아닙니다: "%U%"
+echo 이 패치는 업데이트 1.02 만 지원합니다. RPCS3 로 1.02 를 설치한 뒤 다시 실행하십시오.
+set "U="
 exit /b 1
-
-:pickupdate
-rem 두 판의 업데이트가 모두 깔린 드문 경우: 디스크 PARAM.SFO 로 판을 고른다
-findstr /c:"BLJM60267" "%G%\PS3_GAME\PARAM.SFO" >nul && set "U=%HDD0%\game\BLJM60267"
-findstr /c:"BLUS30608" "%G%\PS3_GAME\PARAM.SFO" >nul && set "U=%HDD0%\game\BLUS30608"
-if not defined U echo 일본판·북미판 업데이트가 모두 있어 판을 고르지 못했습니다. apply.bat 으로 직접 적용하십시오.
-if not defined U goto :fail
-exit /b 0
 
 :hdd0
 rem RPCS3 config\vfs.yml (옛 버전은 RPCS3 폴더) 의 /dev_hdd0/ 경로. 없으면 기본값 RPCS3\dev_hdd0
+rem for 변수는 다시 펼쳐지지 않으므로 따옴표·%·^ 가 든 값도 그대로 읽힌다.
 set "HDD0=%RP%\dev_hdd0"
 set "VFS=%RP%\config\vfs.yml"
 if not exist "%VFS%" set "VFS=%RP%\vfs.yml"
 if not exist "%VFS%" exit /b 0
 set "EMU="
 set "V="
-for /f "usebackq delims=" %%L in ("%VFS%") do call :vfsline "%%L"
+for /f "usebackq tokens=1,*" %%A in ("%VFS%") do (
+  if "%%A"=="$(EmulatorDir):" set "EMU=%%B"
+  if "%%A"=="/dev_hdd0/:" set "V=%%B"
+)
 if not defined V exit /b 0
 if defined EMU set "EMU=%EMU:"=%"
 if not defined EMU set "EMU=%RP%\"
 set "V=%V:"=%"
-call set "V=%%V:$(EmulatorDir)=%EMU%%%"
+if "%V:~0,14%"=="$(EmulatorDir)" set "V=%EMU%%V:~14%"
 set "V=%V:/=\%"
 if "%V:~-1%"=="\" set "V=%V:~0,-1%"
 set "HDD0=%V%"
 exit /b 0
 
-:vfsline
-rem vfs.yml 한 줄: "$(EmulatorDir): 값" 또는 "/dev_hdd0/: 값"
-set "LN=%~1"
-if "%LN:~0,16%"=="$(EmulatorDir): " set "EMU=%LN:~16%"
-if "%LN:~0,12%"=="/dev_hdd0/: " set "V=%LN:~12%"
+:hash
+set "H="
+for /f "skip=1 delims=" %%h in ('certutil -hashfile "%~1" SHA256') do if not defined H set "H=%%h"
+if defined H set "H=%H: =%"
 exit /b 0
 
 :decrypt
-rem %1 암호화된 EBOOT.BIN, %2 결과 EBOOT.elf. 이미 패치했다면 *.orig 가 원본. 임시 폴더에서 RPCS3 로 복호화.
-if exist "%~2" exit /b 0
+rem %1 암호화된 EBOOT.BIN, %2 결과 EBOOT.elf. 이미 패치했다면 *.orig 가 원본.
+rem 남아 있던 EBOOT.elf 가 깨졌을 수도 있어 매번 다시 복호화한다. 임시 폴더에서 RPCS3 로.
 set "SRC=%~1"
 if exist "%~1.orig" set "SRC=%~1.orig"
 set "TD=%TEMP%\fnc_kr_%RANDOM%%RANDOM%"
@@ -304,15 +307,19 @@ copy /y "%SRC%" "%TD%\EBOOT.BIN" >nul || (rd /s /q "%TD%" & exit /b 1)
 echo 복호화: "%~1"
 if defined FNC_TEST_DECRYPT (call "%FNC_TEST_DECRYPT%" "%TD%\EBOOT.BIN") else (start "" /wait "%RP%\rpcs3.exe" --no-gui --decrypt "%TD%\EBOOT.BIN")
 if not exist "%TD%\EBOOT.elf" (echo 복호화에 실패했습니다: "%~1" & rd /s /q "%TD%" & exit /b 1)
-move /y "%TD%\EBOOT.elf" "%~2" >nul
+copy /y "%TD%\EBOOT.elf" "%~2" >nul || (echo 복호화한 파일을 옮기지 못했습니다: "%~2" & rd /s /q "%TD%" & exit /b 1)
 rd /s /q "%TD%"
 exit /b 0
 """
 
 
-def easy_bat(version):
-    """더블클릭용: 폴더 선택 → RPCS3 로 EBOOT 복호화 → 업데이트 1.02 자동 감지 → apply.bat."""
-    return _EASY.replace("{version}", version).replace("{{", "{").replace("}}", "}").replace("\n", "\r\n")
+def easy_bat(version, disc_elfs):
+    """더블클릭용: 폴더 선택 → RPCS3 로 EBOOT 복호화 → 해시로 판 결정 → 그 판의 업데이트 1.02 감지 → apply.bat.
+    disc_elfs: {타이틀ID: 복호화한 디스크 EBOOT.elf sha256}."""
+    regions = "\n".join(f'if /i "%H%"=="{sha}" set "T={title}"' for title, sha in disc_elfs.items())
+    text = (_EASY.replace("{version}", version).replace("{regions}", regions)
+            .replace("{titles}", "/".join(disc_elfs)).replace("{{", "{").replace("}}", "}"))
+    return text.replace("\n", "\r\n")
 
 
 README = """파이트 나이트 챔피언 (PS3) 한글 패치 {version}
@@ -360,6 +367,8 @@ RPCS3 메뉴는 한국어 번역이 없어 영어 이름으로 적었습니다.
 - "원본이 다름": 지원하지 않는 덤프·리비전이거나 *.orig 파일이 바뀐 경우입니다.
 - "판이 다릅니다": 게임 폴더와 업데이트 폴더가 서로 다른 판(일본판/북미판)입니다.
 - "RPCS3 가 실행 중": RPCS3 를 닫은 뒤 다시 실행하십시오.
+- "패치 파일이 옆에 없습니다": zip 을 연 창 안에서 바로 실행한 경우입니다. 압축을 모두 푼 뒤 푼 폴더에서 실행하십시오.
+- "설치된 업데이트가 1.02 가 아닙니다": 업데이트는 1.02 만 지원합니다. RPCS3 로 1.02 를 설치한 뒤 다시 실행하십시오.
 
 [주의]
 - 패치된 EBOOT 와 DLC 파일은 RPCS3 전용입니다(실기 서명 없음).
@@ -432,7 +441,7 @@ def package(version, out_root, xdelta=XDELTA, xdelta_exe=XDELTA_EXE, xdelta_src=
     if updates and set(updates) != set(hashes):
         raise ValueError("업데이트 패치는 모든 판에 있어야 함")
     (out / "apply.bat").write_bytes(bat(version, hashes, subs, updates or None).encode("utf-8"))
-    (out / EASY_BAT).write_bytes(easy_bat(version).encode("utf-8"))
+    (out / EASY_BAT).write_bytes(easy_bat(version, {t: h["EBOOT.elf"] for t, h in hashes.items()}).encode("utf-8"))
     (out / "읽어주세요.txt").write_text(README.format(version=version), encoding="utf-8-sig")
     shutil.copy(xdelta_exe, out / "xdelta3.exe")
     shutil.copy(xdelta_src, out / "xdelta3-3.1.0.tar.gz")
