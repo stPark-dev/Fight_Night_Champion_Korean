@@ -165,3 +165,12 @@ def test_package_rejects_stale_update_build(tmp_path):
         release.package("vtest", tmp_path, xdelta=XDELTA,
                         xdelta_exe=ROOT / "work/tools/xdelta/xdelta3-3.1.0-x86_64.exe",
                         xdelta_src=ROOT / "work/tools/xdelta/xdelta3-3.1.0.tar.gz", regions=regions)
+
+
+def test_readme_uses_real_rpcs3_menu_names_and_move_step():
+    """RPCS3 GUI 에는 한국어 번역이 없다 — 실제 영어 메뉴 이름을 쓰고, EBOOT.elf 를 옮기라고 안내한다."""
+    text = release.README.format(version="v1")
+    for label in ("Utilities > Decrypt PS3 Binaries", "File > Install Packages/Raps/Edats",
+                  "File > Add Games", "Console Language"):
+        assert label in text
+    assert "SELF 복호화" not in text and "옮깁니다" in text
